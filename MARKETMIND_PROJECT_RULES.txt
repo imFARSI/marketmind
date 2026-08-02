@@ -1,0 +1,421 @@
+================================================================================
+MARKETMIND — CSE 471 PROJECT RULES & CONTEXT DOCUMENT
+================================================================================
+
+READ THIS ENTIRE DOCUMENT BEFORE DOING ANYTHING.
+This document contains all rules, context, and guidelines for working on this
+project. Every team member will share this with their AI coding assistant.
+Follow everything strictly.
+
+================================================================================
+1. PROJECT OVERVIEW
+================================================================================
+
+Project Title: MarketMind — Real-Time Competitor & Market Intelligence Platform
+Tagline: "Track Competitors Live. Analyze Markets. Decide Faster."
+Course: CSE 471 — System Analysis and Design
+Semester: Fall 2025
+
+The platform helps small business owners monitor competitors through:
+- Automated data collection (news, search visibility, pricing)
+- Live field agent GPS tracking (like Uber tracking for market research visits)
+- AI-powered analysis (SWOT, strategic recommendations, conversational chat)
+- Automated email notifications
+
+================================================================================
+2. TEAM MEMBERS & ROLES
+================================================================================
+
+Member-1: Salman Farsi      (ID: 23101518) — REPO OWNER / GATEKEEPER
+Member-2: Rifaat Nuha        (ID: 23301320)
+Member-3: Mumtahenah Binta Hashem (ID: 23201398)
+
+Salman Farsi is the GitHub repo owner. ONLY Salman merges pull requests to main.
+
+================================================================================
+3. FEATURE ASSIGNMENTS (WHO BUILDS WHAT)
+================================================================================
+
+IMPORTANT: Faculty will track GitHub to verify each person built their own
+assigned features. Each person MUST only commit code for THEIR OWN features.
+Branch names MUST contain the person's name.
+
+--- MODULE 1 ---
+
+[Salman]      Competitor Management (add/edit/delete/view, by industry)
+[Salman]      Field Research Task Assignment
+[Rifaat]      Business/Workspace Configuration
+[Mumtahenah]  Product & Price Catalog Management (+ auto price history)
+[Mumtahenah]  Competitor Discovery & Search Visibility Tracker (Google Custom Search API)
+
+--- MODULE 2 ---
+
+[Salman]      Pricing Intelligence Dashboard
+[Mumtahenah]  Live Field Agent Location Tracking (LocationIQ)
+[Rifaat]      Competitor News Monitoring (NewsAPI)
+[Rifaat]      Live News Ticker
+[Salman]      Competitor SWOT & Insight Summary (Gemini API)
+
+--- MODULE 3 ---
+
+[Rifaat]      Executive Business Report Generator (PDF/Excel)
+[Mumtahenah]  On-Site Findings Submission & Email Alert (Resend)
+[Rifaat]      Strategic Recommendation Report (Gemini API)
+[Salman]      AI Companion — Ask-Anything Chat (Gemini API)
+[Mumtahenah]  AI Companion — Proactive Insight Alerts (Gemini API)
+
+================================================================================
+4. TECH STACK (MANDATORY — DO NOT CHANGE)
+================================================================================
+
+Language:        Python
+Framework:       Flask
+Frontend:        Jinja2 templates + Bootstrap 5 (via CDN, responsive)
+Database:        SQLite (SQL database, stored as a single .db file)
+ORM:             Flask-SQLAlchemy
+Live Mechanism:  Browser Geolocation API -> AJAX -> Flask -> DB -> Dashboard polls
+Deployment:      Render (or Railway)
+
+================================================================================
+5. EXTERNAL APIs (5 total — all free tier, all require API keys)
+================================================================================
+
+1. Google Gemini API     — SWOT generation, news summarization, strategic recs, AI chat
+2. NewsAPI.org           — Competitor news fetch, search, filter, live news feed
+3. Google Custom Search  — Competitor discovery + search visibility tracking
+4. LocationIQ            — Live map rendering + reverse geocoding for field tracking
+5. Resend               — Automated email notifications (task done, price alert, news)
+
+API keys go in .env file ONLY. Never hardcode API keys in source code.
+.env is in .gitignore and is NEVER pushed to GitHub.
+
+================================================================================
+6. DATABASE ENTITIES
+================================================================================
+
+Users, Businesses (Workspaces), Competitors, Products, Prices, Price History,
+News Articles, Field Tasks, Task Location Logs, AI Analyses, Reports,
+Companion Chat Messages
+
+================================================================================
+7. SYSTEM ROLES
+================================================================================
+
+Admin         — Manage users, industries, competitor database, view system analytics
+Business User — Create workspace, add/track competitors, assign tasks, view dashboard,
+                generate reports, receive AI recommendations
+
+Note: Login/Signup/Logout/SSO/Role Management/Profile Management are common
+workflow and NOT counted as features.
+
+================================================================================
+8. GIT WORKFLOW RULES (FOLLOW STRICTLY)
+================================================================================
+
+RULE 1: NEVER push directly to the "main" branch.
+RULE 2: ALWAYS work on your own named branch.
+RULE 3: ONLY Salman Farsi merges pull requests to main.
+RULE 4: Always pull latest main before starting new work.
+RULE 5: Write clear commit messages.
+RULE 6: Never push .env, __pycache__/, or venv/.
+
+--- BRANCH NAMING FORMAT ---
+
+Use this exact format: firstname/feature-name
+
+Examples:
+  salman/competitor-management
+  salman/field-task-assignment
+  salman/pricing-dashboard
+  salman/swot-analysis
+  salman/ai-companion-chat
+  rifaat/workspace-configuration
+  rifaat/news-monitoring
+  rifaat/live-news-ticker
+8. GIT & BRANCHING RULES (MANDATORY TEAM WORKFLOW)
+================================================================================
+
+Salman Farsi is the GitHub Repo Owner. ONLY Salman merges pull requests to main.
+
+--- CRITICAL MANDATORY TEAM WORKFLOW ---
+
+1. ALWAYS PULL FIRST BEFORE CODING:
+   Every time you start a work session or a new feature, you MUST pull the
+   latest code from main so your local copy is completely up to date.
+
+2. NEVER COMMIT DIRECTLY TO MAIN:
+   Each team member MUST work on their own named feature branch.
+   Faculty tracks commits per person on GitHub to verify grading.
+
+3. COMMIT FORMAT CONVENTION:
+   Commit messages should be clean, short, and human-readable:
+   - feat: add product catalog view
+   - feat: implement news ticker blueprint
+   - fix: correct login redirect error
+
+--- STEP-BY-STEP WORKFLOW FOR NUHA & MUMTAHENAH ---
+
+Step 1: Switch to main & pull latest code:
+        git checkout main
+        git pull origin main
+
+Step 2: Create your feature branch (name MUST contain your name):
+        git checkout -b nuha/workspace         (for Nuha)
+        git checkout -b mumtahenah/products    (for Mumtahenah)
+
+Step 3: Write and test your code locally.
+
+Step 4: Stage and commit your changes:
+        git add .
+        git commit -m "feat: short description of what you built"
+
+Step 5: Push YOUR BRANCH to GitHub (DO NOT push directly to main):
+        git push origin nuha/workspace         (for Nuha)
+        git push origin mumtahenah/products    (for Mumtahenah)
+
+Step 6: Open Pull Request on GitHub:
+        Go to https://github.com/imFARSI/marketmind -> Click "Compare & pull request"
+        Select base: main <- compare: your-branch-name
+
+Step 7: Salman (Repo Owner) Reviews & Merges:
+        Salman reviews the code changes on GitHub, approves, and clicks "Merge pull request".
+
+Step 8: After Salman merges, go back to Step 1 for your next feature!
+
+================================================================================
+9. FLASK PROJECT STRUCTURE CONVENTIONS
+================================================================================
+
+The project uses a clean modular Flask architecture with SYMMETRIC folders
+for each team member in both routes (backend) and templates (frontend).
+
+PROJECT FILE STRUCTURE:
+
+marketmind/
+  app.py                          <- Main Flask app (registers member blueprints)
+  models.py                       <- Shared database models (all 12 tables)
+  requirements.txt                <- Python dependencies
+  .env                            <- API keys (NOT pushed to GitHub)
+  .gitignore                      <- Files to ignore
+  README.md                       <- Project info
+  marketmind.db                   <- SQLite database file (auto-created)
+  
+  routes/                         <- BACKEND PYTHON CODE (by member & feature)
+    auth.py                       <- Shared Auth routes (Login / Register / Logout)
+    salman/                       <- SALMAN'S BACKEND FOLDER
+      competitors.py              <- Feature 1: Competitor Management
+      field_tasks.py              <- Feature 2: Field Research Task Assignment
+      pricing_dashboard.py        <- Feature 3: Pricing Intelligence Dashboard
+      swot.py                     <- Feature 4: Competitor SWOT Summary
+      ai_chat.py                  <- Feature 5: AI Companion Chat
+    nuha/                         <- NUHA'S BACKEND FOLDER
+      workspace.py                <- Feature 1: Workspace Configuration
+      news.py                     <- Feature 2: News Monitoring
+      news_ticker.py              <- Feature 3: Live News Ticker
+      reports.py                  <- Feature 4: Executive Report Generator
+      strategic.py                <- Feature 5: Strategic Recommendations
+    mumtahenah/                   <- MUMTAHENAH'S BACKEND FOLDER
+      products.py                 <- Feature 1: Product Catalog Management
+      discovery.py                <- Feature 2: Competitor Discovery
+      tracking.py                 <- Feature 3: Live Field Agent Tracking
+      findings.py                 <- Feature 4: On-Site Findings Submission
+      ai_alerts.py                <- Feature 5: Proactive Insight Alerts
+
+  templates/                      <- FRONTEND HTML PAGES (by member & feature)
+    layout.html                   <- Shared layout (navbar + footer)
+    home.html                     <- Shared landing page
+    auth/                         <- Shared Auth pages
+      login.html
+      register.html
+      dashboard.html
+    salman/                       <- SALMAN'S FRONTEND FOLDER
+      competitors.html
+      field_tasks.html
+      ...
+    nuha/                         <- NUHA'S FRONTEND FOLDER
+      workspace.html
+      ...
+    mumtahenah/                   <- MUMTAHENAH'S FRONTEND FOLDER
+      products.html
+      ...
+
+--- STRICT CODE SEPARATION RULE (VERY IMPORTANT FOR VIVA/DEMO) ---
+
+All 3 members will have INDIVIDUAL exams, viva, and demo. Faculty will ask
+each person to show and explain THEIR code. Therefore, each person's features
+MUST live on completely SEPARATE Python files and HTML templates inside THEIR OWN
+dedicated subfolders.
+
+DO NOT mix two members' code in the same file or template.
+
+RULE: Each feature = its own route file in routes/{member}/ + its own HTML in templates/{member}/.
+      No two members should edit the same route or template file.
+
+The ONLY shared files are:
+  - app.py (registers all member blueprints)
+  - models.py (defines all 12 database tables)
+  - routes/auth.py (handles login/register/dashboard)
+  - templates/layout.html (common navbar and footer layout)
+
+FILE OWNERSHIP MAP (who creates what):
+
+  SALMAN FARSI owns:
+    routes/salman/                 (all Python route files inside)
+    templates/salman/              (all HTML template files inside)
+
+  NUHA owns:
+    routes/nuha/                   (all Python route files inside)
+    templates/nuha/                (all HTML template files inside)
+
+  MUMTAHENAH BINTA HASHEM owns:
+    routes/mumtahenah/             (all Python route files inside)
+    templates/mumtahenah/          (all HTML template files inside)
+
+DO NOT create code in another member's folder. If you need to link to another
+member's feature, just use a URL link in your template.
+
+================================================================================
+10. DATABASE — HOW IT WORKS ACROSS 3 LAPTOPS
+================================================================================
+
+IMPORTANT: You do NOT share one database. Each person has their OWN local
+SQLite database on their OWN laptop. The database STRUCTURE (tables, columns)
+is kept identical because everyone runs the SAME app.py file which defines
+the same models.
+
+SQLite database = just a SINGLE FILE called "marketmind.db". No MySQL,
+no server, no installation needed. It is auto-created when you run the app.
+
+--- HOW EACH PERSON SETS UP THEIR DATABASE (one time only) ---
+
+Step 1: Clone the repo and install dependencies (see Section 11)
+Step 2: Run: python app.py
+        This automatically creates marketmind.db with all tables.
+        Done. No MySQL, no setup, no passwords.
+
+--- WHAT HAPPENS WHEN SOMEONE ADDS A NEW MODEL/TABLE LATER ---
+
+Example: Salman adds a new FieldTask model in app.py and pushes to GitHub.
+
+What Rifaat does:
+  git pull origin main          (gets the updated app.py with new model)
+  Delete the old marketmind.db file (or run a db reset command)
+  Run: python app.py            (recreates the database with ALL tables)
+
+--- WHAT GOES TO GITHUB vs WHAT STAYS LOCAL ---
+
+  app.py (routes + models)         -> YES, pushed to GitHub
+  templates/ (HTML files)           -> YES, pushed to GitHub
+  static/ (CSS, JS, images)        -> YES, pushed to GitHub
+  requirements.txt                  -> YES, pushed to GitHub
+  .env file (API keys)             -> NO, stays on your laptop only
+  marketmind.db (database file)    -> NO, stays on your laptop only
+  __pycache__/ folder              -> NO, auto-generated by Python
+  venv/ folder                     -> NO, each person creates their own
+
+--- THE 3 COMMANDS TO RUN AFTER PULLING NEW CODE ---
+
+  git pull origin main            (get latest code)
+  pip install -r requirements.txt (install any new packages if added)
+  python app.py                   (run the app, database auto-creates)
+
+================================================================================
+11. WHAT TO DO WHEN STARTING FRESH ON A NEW LAPTOP
+================================================================================
+
+Step 1:  git clone https://github.com/imFARSI/marketmind.git
+Step 2:  cd marketmind
+Step 3:  python -m venv venv
+Step 4:  venv\Scripts\activate                    (Windows)
+         or: source venv/bin/activate             (Mac/Linux)
+Step 5:  pip install -r requirements.txt
+Step 6:  Create a .env file with your API keys:
+           GEMINI_API_KEY=your_key
+           NEWS_API_KEY=your_key
+           GOOGLE_SEARCH_API_KEY=your_key
+           LOCATIONIQ_API_KEY=your_key
+           RESEND_API_KEY=your_key
+           SECRET_KEY=any_random_string_here
+Step 7:  python app.py
+Step 8:  Open http://localhost:5000 in browser
+
+That's it. No MySQL, no Composer, no npm. Just Python.
+
+================================================================================
+12. IMPORTANT NOTES FOR AI ASSISTANTS
+================================================================================
+
+- You are helping ONE member of a 3-person team.
+- ONLY write code for the features assigned to the person you are helping.
+- Do NOT touch or modify template files that belong to another member's feature.
+- If you need a database model from another member's feature (dependency),
+  add only the model definition — do NOT build their full feature routes/templates.
+- Follow the branch naming convention strictly.
+- Follow the commit message format strictly.
+- All templates should extend the shared layout (templates/layout.html).
+- Use Bootstrap 5 via CDN for all styling. No Tailwind, no npm build step.
+- Keep the code clean, well-commented, and at a university student level.
+  Do NOT write overly complex or advanced code that the student cannot explain.
+- The student will face a VIVA where they must explain their code.
+  Add comments explaining what each section does.
+- Make sure the code the AI writes is something the student can understand
+  and explain confidently.
+
+================================================================================
+13. DESIGN THEME
+================================================================================
+
+The overall design should be clean, modern, and professional.
+Primary colors: White backgrounds, blue accents, dark text.
+Use Bootstrap 5 classes for layout, cards, tables, forms, buttons, and navbar.
+Responsive design is required (mobile + desktop).
+Use a shared Jinja2 layout template so all pages look consistent.
+Bootstrap is loaded via CDN in the layout template — no installation needed.
+
+================================================================================
+14. INSTRUCTOR RULES (MANDATORY — FAILURE = ZERO MARKS)
+================================================================================
+
+These rules come directly from the course instructor. Violating ANY of these
+will result in ZERO MARKS.
+
+--- AI USAGE RULES ---
+
+  - AI tools (GPT, Claude, Gemini, Copilot, Antigravity) ARE allowed for
+    partial code generation and debugging support.
+  - AI dependency without understanding is STRICTLY PROHIBITED.
+  - Failure to properly explain ANY AI-generated code when asked = ZERO MARKS.
+  - Inability to perform LIVE MODIFICATIONS (both frontend and backend)
+    during evaluation will also lead to ZERO MARKS.
+  - Every student must maintain COMPLETE OWNERSHIP and understanding of
+    their codebase.
+  - AI may assist you, but it CANNOT replace your logic, reasoning,
+    or accountability.
+
+--- NO HARDCODED DATA ---
+
+  - Hardcoded data is NOT accepted.
+  - ALL CRUD operations must be REAL — data must come from and go to
+    the SQLite database.
+  - Do NOT fake data with static arrays, JSON files, or hardcoded HTML.
+  - Every list, table, form submission, edit, and delete must actually
+    read from and write to the database using Flask-SQLAlchemy models.
+
+--- UI/UX RULES ---
+
+  - Frontend must be RESPONSIVE and MOBILE-FRIENDLY.
+  - Allowed CSS: Bootstrap, Tailwind CSS, Material UI, DaisyUI, Chakra UI,
+    Ant Design, or any CSS library that is NOT a full CMS or page builder.
+  - NOT ALLOWED: Drag-and-drop builders (Elementor, Wix-style editors),
+    or AI-generated full page templates without understanding the code.
+  - We are using Bootstrap 5 for this project.
+
+--- VERSION CONTROL ---
+
+  - Must use GitHub with INDIVIDUAL commit history.
+  - Copy-paste code without commits will be PENALIZED.
+  - Each person's commits must show THEIR work on THEIR features.
+
+================================================================================
+END OF DOCUMENT
+================================================================================
