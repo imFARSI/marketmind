@@ -18,10 +18,8 @@ env/
 instance/
 *.db
 
-# Environment Variables
-.env
-.env.local
-.env.production
+# PDF & Rule Documents
+*.pdf
 MARKETMIND_PROJECT_RULES.txt
 
 # IDE
