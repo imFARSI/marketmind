@@ -1,0 +1,228 @@
+{% extends 'layout.html' %}
+
+{% block title %}MarketMind — Real-Time Competitor & Market Intelligence Platform{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Clean Hero Container */
+    .hero-wrapper {
+        background-color: #0B132B;
+        color: #FFFFFF;
+        min-height: calc(100vh - 64px);
+        display: flex;
+        align-items: center;
+        position: relative;
+        overflow: hidden;
+    }
+
+    /* Ambient Subtle Background Glow */
+    .hero-glow {
+        position: absolute;
+        width: 600px;
+        height: 600px;
+        background: radial-gradient(circle, rgba(37, 99, 235, 0.2) 0%, rgba(0, 0, 0, 0) 70%);
+        top: -100px;
+        right: -100px;
+        border-radius: 50%;
+        filter: blur(80px);
+        pointer-events: none;
+    }
+
+    /* 3D Perspective Stage */
+    .perspective-stage {
+        perspective: 1000px;
+    }
+
+    /* High-End Glass Feature Cards */
+    .glass-card-3d {
+        background: rgba(15, 23, 42, 0.85);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 16px;
+        padding: 1.5rem;
+        transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.25s ease, box-shadow 0.25s ease;
+        transform-style: preserve-3d;
+    }
+
+    .glass-card-3d:hover {
+        transform: translateZ(15px) rotateX(4deg) rotateY(-4deg);
+        border-color: rgba(56, 189, 248, 0.6);
+        box-shadow: 0 20px 40px -15px rgba(37, 99, 235, 0.4);
+    }
+
+    /* Crisp Typography */
+    .card-title-text {
+        color: #FFFFFF;
+        font-size: 1.05rem;
+        font-weight: 700;
+    }
+
+    .card-body-text {
+        color: #CBD5E1;
+        font-size: 0.9rem;
+        line-height: 1.5;
+    }
+
+    .footer-link {
+        color: #CBD5E1 !important;
+        text-decoration: none;
+        transition: color 0.2s ease;
+    }
+
+    .footer-link:hover {
+        color: #38BDF8 !important;
+    }
+
+    .footer-text-light {
+        color: #CBD5E1 !important;
+    }
+</style>
+{% endblock %}
+
+{% block public_content %}
+<div style="background-color: #0B132B;">
+
+    <!-- HERO SECTION -->
+    <div class="hero-wrapper py-5">
+        <div class="hero-glow"></div>
+
+        <div class="container position-relative">
+            <div class="row align-items-center">
+                <!-- Left Column: Primary Copy -->
+                <div class="col-lg-6 text-start mb-5 mb-lg-0">
+                    <div class="text-info fw-semibold small mb-3 d-flex align-items-center gap-2">
+                        <i class="bi bi-cpu-fill"></i> Real-Time Market Intelligence Engine
+                    </div>
+                    
+                    <h1 class="display-3 fw-bold text-white mb-2 tracking-tight">MarketMind</h1>
+                    <h3 class="h3 fw-semibold text-info mb-4" style="letter-spacing: -0.5px;">"Track Competitors Live. Analyze Markets. Decide Faster."</h3>
+                    
+                    <p class="lead text-light text-opacity-75 mb-4 pe-lg-3 fs-6" style="line-height: 1.65;">
+                        Empower your enterprise with automated rival data collection, intelligent price monitoring, and AI-driven market telemetry. MarketMind delivers continuous background market intelligence and coordinates real-time field research logistics on a unified platform.
+                    </p>
+
+                    <div class="d-flex flex-column flex-sm-row gap-3 pt-2">
+                        <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg px-4 py-3 rounded-3 fw-bold shadow-lg d-inline-flex align-items-center justify-content-center" style="background: #2563EB; border: none;">
+                            Get Started <i class="bi bi-arrow-right ms-2"></i>
+                        </a>
+                        <a href="{{ url_for('auth.login') }}" class="btn btn-outline-light btn-lg px-4 py-3 rounded-3 fw-semibold" style="border-color: rgba(255,255,255,0.25);">
+                            Sign In to Workspace
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Right Column: Clean 3D Interactive Showcase Cards -->
+                <div class="col-lg-6">
+                    <div class="perspective-stage d-grid gap-3">
+                        
+                        <!-- 3D Feature Card 1 -->
+                        <div class="glass-card-3d">
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <i class="bi bi-building text-info fs-5"></i>
+                                <span class="card-title-text">Competitor Management</span>
+                            </div>
+                            <p class="card-body-text mb-0">Categorize, track, and monitor competitor profiles & search visibility score by industry.</p>
+                        </div>
+
+                        <!-- 3D Feature Card 2 -->
+                        <div class="glass-card-3d">
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <i class="bi bi-graph-up-arrow text-warning fs-5"></i>
+                                <span class="card-title-text">Pricing Intelligence & History</span>
+                            </div>
+                            <p class="card-body-text mb-0">Monitor automatic price change timelines and receive instant undercut alerts across product catalogs.</p>
+                        </div>
+
+                        <!-- 3D Feature Card 3 -->
+                        <div class="glass-card-3d">
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <i class="bi bi-robot text-success fs-5"></i>
+                                <span class="card-title-text">AI SWOT & Insight Recommendations</span>
+                            </div>
+                            <p class="card-body-text mb-0">Automated SWOT insight reports and real-time strategic recommendations powered by Gemini AI.</p>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CALL TO ACTION BANNER -->
+    <div class="py-5 border-top border-white border-opacity-10">
+        <div class="container py-3">
+            <div class="p-5 rounded-4 text-center" style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255,255,255,0.15);">
+                <h2 class="display-6 fw-bold text-white mb-3">Ready to Monitor Your Competitors Live?</h2>
+                <p class="text-light text-opacity-75 max-w-lg mx-auto mb-4">Set up your workspace in seconds and start tracking real-time market data.</p>
+                <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg px-5 py-3 rounded-3 fw-bold" style="background: #2563EB; border: none;">
+                    Create Free Workspace <i class="bi bi-arrow-right ms-2"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- RESTORED HIGH-CONTRAST FOOTER -->
+    <footer class="border-top border-white border-opacity-15 py-5" style="background: #060B18;">
+        <div class="container">
+            <div class="row align-items-center justify-content-between g-4 pb-3">
+                <!-- Column 1: Brand & Socials -->
+                <div class="col-md-6 text-start">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <i class="bi bi-graph-up-arrow text-info fs-4"></i>
+                        <h5 class="fw-bold text-white mb-0">MarketMind</h5>
+                    </div>
+                    <p class="footer-text-light small mb-3">Track Competitors Live. Analyze Markets. Decide Faster.</p>
+                    <div class="d-flex gap-3">
+                        <a href="https://github.com/imFARSI/marketmind" target="_blank" class="footer-link fs-5"><i class="bi bi-github"></i></a>
+                        <a href="#" class="footer-link fs-5"><i class="bi bi-linkedin"></i></a>
+                        <a href="#" class="footer-link fs-5"><i class="bi bi-twitter-x"></i></a>
+                    </div>
+                </div>
+
+                <!-- Column 2: Office & Contact -->
+                <div class="col-md-6 text-md-end">
+                    <h6 class="fw-bold text-white mb-2 text-uppercase small" style="letter-spacing: 1px;">Office & Support</h6>
+                    <p class="footer-text-light small mb-1"><i class="bi bi-geo-alt text-info me-1"></i>Dhaka HQ, Bangladesh</p>
+                    <p class="footer-text-light small mb-0"><i class="bi bi-envelope text-info me-1"></i>salman@marketmind.live</p>
+                </div>
+            </div>
+
+            <!-- Bottom Bar -->
+            <div class="border-top border-white border-opacity-10 pt-4 mt-2 d-flex flex-column flex-md-row justify-content-between align-items-center footer-text-light small">
+                <div>© 2026 MarketMind. All rights reserved.</div>
+                <div class="d-flex gap-3 mt-2 mt-md-0">
+                    <a href="#" class="footer-link">Privacy Policy</a>
+                    <a href="#" class="footer-link">Terms of Service</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const cards = document.querySelectorAll('.glass-card-3d');
+        
+        cards.forEach(card => {
+            card.addEventListener('mousemove', (e) => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left - rect.width / 2;
+                const y = e.clientY - rect.top - rect.height / 2;
+
+                const rotateX = -(y / (rect.height / 2)) * 8;
+                const rotateY = (x / (rect.width / 2)) * 8;
+
+                card.style.transform = `perspective(600px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(10px)`;
+            });
+
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = `perspective(600px) rotateX(0deg) rotateY(0deg) translateZ(0px)`;
+            });
+        });
+    });
+</script>
+{% endblock %}

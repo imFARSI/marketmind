@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}MarketMind — Strategic Intelligence{% endblock %}</title>
+    <!-- Google Fonts & Bootstrap 5 & Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    
+    <style>
+        :root {
+            --sidebar-bg: #0B132B;
+            --sidebar-hover: #1C2541;
+            --sidebar-active: #1E293B;
+            --primary-blue: #2563EB;
+            --primary-hover: #1D4ED8;
+            --body-bg: #F8FAFC;
+            --card-border: #E2E8F0;
+            --text-dark: #0F172A;
+            --text-muted: #64748B;
+        }
+
+        html, body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            margin: 0;
+            padding: 0;
+            scroll-behavior: smooth;
+        }
+
+        /* Sidebar Styling */
+        .app-sidebar {
+            width: 260px;
+            background-color: var(--sidebar-bg);
+            min-height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .sidebar-brand {
+            padding: 1.5rem 1.5rem 1rem 1.5rem;
+        }
+
+        .sidebar-brand .logo-text {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #FFFFFF;
+            letter-spacing: -0.5px;
+            margin: 0;
+        }
+
+        .sidebar-brand .sub-text {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 2px;
+        }
+
+        .sidebar-nav {
+            padding: 1rem 0.75rem;
+            flex-grow: 1;
+        }
+
+        .sidebar-nav .nav-link {
+            color: #94A3B8;
+            font-size: 0.875rem;
+            font-weight: 500;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            transition: all 0.2s ease;
+        }
+
+        .sidebar-nav .nav-link i {
+            font-size: 1.1rem;
+            margin-right: 0.75rem;
+        }
+
+        .sidebar-nav .nav-link:hover {
+            color: #FFFFFF;
+            background-color: var(--sidebar-hover);
+        }
+
+        .sidebar-nav .nav-link.active {
+            color: #FFFFFF;
+            background-color: var(--sidebar-active);
+            font-weight: 600;
+            box-shadow: inset 3px 0 0 var(--primary-blue);
+        }
+
+        .sidebar-user {
+            padding: 1.25rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(0, 0, 0, 0.15);
+        }
+
+        .sidebar-user .user-name {
+            color: #FFFFFF;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .sidebar-user .user-role {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            margin: 0;
+        }
+
+        /* Main Content Wrapper */
+        .app-main {
+            margin-left: 260px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Top Navigation Header */
+        .app-topbar {
+            height: 64px;
+            background-color: #FFFFFF;
+            border-bottom: 1px solid var(--card-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 999;
+        }
+
+        .app-topbar-dark {
+            height: 64px;
+            background-color: #0B132B;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 999;
+        }
+
+        .topbar-search {
+            position: relative;
+            width: 320px;
+        }
+
+        .topbar-search input {
+            background-color: #F1F5F9;
+            border: 1px solid transparent;
+            border-radius: 20px;
+            padding: 0.45rem 1rem 0.45rem 2.25rem;
+            font-size: 0.85rem;
+            width: 100%;
+            transition: all 0.2s ease;
+        }
+
+        .topbar-search input:focus {
+            background-color: #FFFFFF;
+            border-color: var(--primary-blue);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .topbar-search i {
+            position: absolute;
+            left: 0.85rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+        }
+
+        .topbar-icon-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            cursor: pointer;
+            padding: 0.25rem;
+            position: relative;
+        }
+
+        .topbar-icon-btn:hover {
+            color: var(--text-dark);
+        }
+
+        .topbar-brand-title {
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: var(--text-dark);
+        }
+
+        /* Content Canvas */
+        .app-content {
+            padding: 2rem;
+            flex-grow: 1;
+        }
+
+        /* Footer */
+        .app-footer {
+            padding: 1.25rem 2rem;
+            background-color: #FFFFFF;
+            border-top: 1px solid var(--card-border);
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .app-footer-dark {
+            padding: 1.25rem 2rem;
+            background-color: #070D1D;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 0.8rem;
+            color: #94A3B8;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Global Reusable Component Styles */
+        .btn-primary-custom {
+            background-color: var(--primary-blue);
+            color: #FFFFFF;
+            border: none;
+            font-weight: 600;
+            border-radius: 8px;
+            padding: 0.55rem 1.25rem;
+            font-size: 0.875rem;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary-custom:hover {
+            background-color: var(--primary-hover);
+            color: #FFFFFF;
+        }
+
+        .card-custom {
+            background: #FFFFFF;
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+    {% if current_user.is_authenticated %}
+    <!-- Sidebar Navigation for Authenticated Workspace Users -->
+    <aside class="app-sidebar">
+        <div>
+            <div class="sidebar-brand">
+                <h1 class="logo-text">MarketMind</h1>
+                <div class="sub-text">Strategic Intelligence</div>
+            </div>
+            <nav class="sidebar-nav">
+                {% if current_user.role == 'Field Agent' %}
+                <a href="{{ url_for('salman_field_tasks.my_tasks') }}" class="nav-link {% if request.endpoint == 'salman_field_tasks.my_tasks' %}active{% endif %}">
+                    <i class="bi bi-card-checklist"></i> My Assigned Tasks
+                </a>
+                {% else %}
+                <a href="{{ url_for('auth.dashboard') }}" class="nav-link {% if request.endpoint == 'auth.dashboard' %}active{% endif %}">
+                    <i class="bi bi-grid-1x2"></i> Dashboard
+                </a>
+                <a href="{{ url_for('salman_competitors.index') }}" class="nav-link {% if 'salman_competitors' in request.endpoint %}active{% endif %}">
+                    <i class="bi bi-building"></i> Competitors
+                </a>
+                <a href="{{ url_for('salman_field_tasks.index') }}" class="nav-link {% if 'salman_field_tasks' in request.endpoint and request.endpoint != 'salman_field_tasks.my_tasks' %}active{% endif %}">
+                    <i class="bi bi-card-checklist"></i> Field Tasks
+                </a>
+                {% endif %}
+            </nav>
+        </div>
+
+        <div class="sidebar-user">
+            <div class="user-name">{{ current_user.username }}</div>
+            <div class="user-role">{{ current_user.role }}</div>
+        </div>
+    </aside>
+
+    <!-- Main Workspace Area -->
+    <div class="app-main">
+        <!-- Top Bar -->
+        <header class="app-topbar">
+            <div class="topbar-search">
+                <i class="bi bi-search"></i>
+                <input type="text" placeholder="Search competitors or products...">
+            </div>
+            <div class="topbar-right">
+                <button class="topbar-icon-btn"><i class="bi bi-bell"></i></button>
+                <div class="topbar-brand-title">MarketMind</div>
+                <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-danger btn-sm rounded-pill px-3 ms-2">Logout</a>
+            </div>
+        </header>
+
+        <!-- Dynamic Content Canvas -->
+        <main class="app-content">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show border-0 shadow-sm mb-4" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endfor %}
+            {% endif %}
+            {% endwith %}
+
+            {% block content %}{% endblock %}
+        </main>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <div><strong>MarketMind</strong> © 2026. All rights reserved.</div>
+            <div class="d-flex gap-3">
+                <a href="#" class="text-decoration-none text-muted">Privacy Policy</a>
+                <a href="#" class="text-decoration-none text-muted">Terms of Service</a>
+                <a href="#" class="text-decoration-none text-muted">Support</a>
+            </div>
+        </footer>
+    </div>
+
+    {% else %}
+
+    <!-- Vertical Scrolling Public Page Wrapper (Landing / Login / Register) -->
+    <div style="background-color: #0B132B; min-height: 100vh;">
+        <header class="app-topbar-dark px-4 px-md-5">
+            <a href="{{ url_for('auth.index') }}" class="d-flex align-items-center gap-2 text-decoration-none">
+                <i class="bi bi-graph-up-arrow text-info fs-4"></i>
+                <div class="fw-bold fs-5 text-white">MarketMind</div>
+            </a>
+            <div class="d-flex gap-2">
+                <a href="{{ url_for('auth.login') }}" class="btn btn-outline-light btn-sm px-3 fw-semibold rounded-pill">Login</a>
+                <a href="{{ url_for('auth.register') }}" class="btn btn-primary-custom btn-sm px-3">Get Started</a>
+            </div>
+        </header>
+
+        <main>
+            <div class="container pt-4">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show border-0 shadow-sm mb-4" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+                {% endwith %}
+            </div>
+            {% block public_content %}{% endblock %}
+        </main>
+    </div>
+    {% endif %}
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

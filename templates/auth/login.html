@@ -1,0 +1,68 @@
+{% extends 'layout.html' %}
+
+{% block title %}Login — MarketMind{% endblock %}
+
+{% block public_content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-5 col-lg-4">
+            <div class="card p-4 rounded-4 shadow-lg" style="background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.15);">
+                <div class="text-center mb-4">
+                    <div class="bg-primary bg-opacity-20 text-info rounded-circle d-inline-flex align-items-center justify-content-center mb-2 border border-info border-opacity-30" style="width: 52px; height: 52px;">
+                        <i class="bi bi-box-arrow-in-right fs-4"></i>
+                    </div>
+                    <h4 class="fw-bold text-white mb-1">Login</h4>
+                    <p class="text-light text-opacity-75 small">Enter your credentials to access MarketMind</p>
+                </div>
+
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-light">Email Address</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-black bg-opacity-40 border-secondary text-muted"><i class="bi bi-envelope"></i></span>
+                            <input type="email" name="email" class="form-control bg-black bg-opacity-40 border-secondary text-white" placeholder="name@company.com" pattern="[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}" title="Must be a valid email address (e.g. name@company.com)" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold small text-light">Password</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-black bg-opacity-40 border-secondary text-muted"><i class="bi bi-lock"></i></span>
+                            <input type="password" id="loginPassword" name="password" class="form-control bg-black bg-opacity-40 border-secondary text-white" placeholder="••••••••" required>
+                            <button class="btn btn-outline-secondary border-secondary text-light" type="button" onclick="togglePassword('loginPassword', 'eyeIcon')">
+                                <i class="bi bi-eye" id="eyeIcon"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 py-2.5 rounded-3 fw-bold shadow" style="background: #2563EB; border: none;">
+                        Login <i class="bi bi-arrow-right ms-1"></i>
+                    </button>
+                </form>
+
+                <div class="text-center mt-4 pt-3 border-top border-white border-opacity-10">
+                    <small class="text-light text-opacity-75">New to MarketMind? <a href="{{ url_for('auth.register') }}" class="text-info text-decoration-none fw-semibold">Create Account or Join as Agent</a></small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function togglePassword(inputId, iconId) {
+        const passwordInput = document.getElementById(inputId);
+        const eyeIcon = document.getElementById(iconId);
+        if (passwordInput.type === "password") {
+            passwordInput.type = "text";
+            eyeIcon.classList.remove("bi-eye");
+            eyeIcon.classList.add("bi-eye-slash");
+        } else {
+            passwordInput.type = "password";
+            eyeIcon.classList.remove("bi-eye-slash");
+            eyeIcon.classList.add("bi-eye");
+        }
+    }
+</script>
+{% endblock %}

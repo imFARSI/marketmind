@@ -1,0 +1,321 @@
+{% extends 'layout.html' %}
+
+{% block title %}Competitor Management — MarketMind{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1">Competitors</h2>
+        <p class="text-muted small mb-0">Manage and monitor strategic rival movements.</p>
+    </div>
+    <div class="mt-3 mt-md-0">
+        <button class="btn btn-primary-custom px-3 py-2 shadow-sm d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#addCompetitorModal">
+            <i class="bi bi-plus-lg fs-6"></i> Add Competitor
+        </button>
+    </div>
+</div>
+
+<!-- Stat Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card card-custom p-3 bg-white">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="text-muted small fw-semibold d-block">Total Competitors</span>
+                    <h2 class="fw-bold mb-0 text-dark">{{ total_count }}</h2>
+                </div>
+                <div class="bg-primary bg-opacity-10 text-primary rounded-3 p-3">
+                    <i class="bi bi-people fs-4"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filter Controls & Data Canvas Card -->
+<div class="card card-custom p-4 bg-white">
+    <form method="GET" action="{{ url_for('salman_competitors.index') }}" class="row g-3 align-items-center mb-4">
+        <div class="col-md-4">
+            <div class="topbar-search w-100">
+                <i class="bi bi-search"></i>
+                <input type="text" name="search" value="{{ search_query }}" placeholder="Search competitors..." onchange="this.form.submit()">
+            </div>
+        </div>
+        <div class="col-md-3">
+            <select name="industry" class="form-select form-select-sm rounded-pill px-3" onchange="this.form.submit()">
+                <option value="">All Industries</option>
+                <option value="Technology" {% if selected_industry == 'Technology' %}selected{% endif %}>Technology</option>
+                <option value="Retail & E-commerce" {% if selected_industry == 'Retail & E-commerce' %}selected{% endif %}>Retail & E-commerce</option>
+                <option value="Healthcare & Pharma" {% if selected_industry == 'Healthcare & Pharma' %}selected{% endif %}>Healthcare & Pharma</option>
+                <option value="Finance & Banking" {% if selected_industry == 'Finance & Banking' %}selected{% endif %}>Finance & Banking</option>
+                <option value="Consumer Electronics" {% if selected_industry == 'Consumer Electronics' %}selected{% endif %}>Consumer Electronics</option>
+                <option value="Food & Beverage" {% if selected_industry == 'Food & Beverage' %}selected{% endif %}>Food & Beverage</option>
+                <option value="Automotive" {% if selected_industry == 'Automotive' %}selected{% endif %}>Automotive</option>
+                <option value="Fashion & Apparel" {% if selected_industry == 'Fashion & Apparel' %}selected{% endif %}>Fashion & Apparel</option>
+                <option value="Real Estate" {% if selected_industry == 'Real Estate' %}selected{% endif %}>Real Estate</option>
+                <option value="Other" {% if selected_industry == 'Other' %}selected{% endif %}>Other</option>
+            </select>
+        </div>
+        {% if search_query or selected_industry %}
+        <div class="col-md-2">
+            <a href="{{ url_for('salman_competitors.index') }}" class="btn btn-link btn-sm text-decoration-none text-muted">Clear Filters</a>
+        </div>
+        {% endif %}
+    </form>
+
+    <!-- Table -->
+    {% if competitors %}
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light text-uppercase small text-muted">
+                <tr>
+                    <th scope="col" class="py-3">Competitor Name</th>
+                    <th scope="col" class="py-3">Industry</th>
+                    <th scope="col" class="py-3">Location</th>
+                    <th scope="col" class="py-3">Website</th>
+                    <th scope="col" class="py-3 text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for comp in competitors %}
+                <tr>
+                    <td class="fw-bold text-dark py-3">
+                        <div class="d-flex align-items-center gap-2 cursor-pointer" data-bs-toggle="modal" data-bs-target="#viewModal{{ comp.id }}" title="Click to view details">
+                            <div class="bg-light border rounded p-2 text-primary fw-bold small text-uppercase" style="width: 38px; height: 38px; display: flex; align-items: center; justify-content: center;">
+                                {{ comp.name[:2] }}
+                            </div>
+                            <div>
+                                <a href="javascript:void(0)" class="text-dark text-decoration-none fw-bold hover-primary">{{ comp.name }}</a>
+                                {% if comp.description %}
+                                <small class="text-muted text-truncate d-block" style="max-width: 200px;">{{ comp.description }}</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge bg-info-subtle text-info-emphasis rounded-pill px-3 py-1 fw-medium">{{ comp.industry }}</span>
+                    </td>
+                    <td class="text-muted small">
+                        <i class="bi bi-geo-alt me-1"></i>{{ comp.location or 'N/A' }}
+                    </td>
+                    <td>
+                        {% if comp.website %}
+                        <a href="{{ comp.website }}" target="_blank" class="text-primary text-decoration-none small">
+                            {{ comp.website.replace('https://', '').replace('http://', '') }} <i class="bi bi-box-arrow-up-right ms-1" style="font-size: 0.75rem;"></i>
+                        </a>
+                        {% else %}
+                        <span class="text-muted small">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">
+                        <button class="btn btn-light btn-sm text-primary rounded-circle me-1" data-bs-toggle="modal" data-bs-target="#viewModal{{ comp.id }}" title="View Details">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                        <button class="btn btn-light btn-sm text-muted rounded-circle me-1" data-bs-toggle="modal" data-bs-target="#editModal{{ comp.id }}" title="Edit">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-light btn-sm text-danger rounded-circle" data-bs-toggle="modal" data-bs-target="#deleteModal{{ comp.id }}" title="Delete">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+
+                <!-- View Details Modal -->
+                <div class="modal fade" id="viewModal{{ comp.id }}" tabindex="-1">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content border-0 shadow">
+                            <div class="modal-header border-bottom pb-3">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="bg-primary bg-opacity-10 text-primary rounded-3 p-3 fw-bold fs-4">
+                                        {{ comp.name[:2] }}
+                                    </div>
+                                    <div>
+                                        <h5 class="modal-title fw-bold text-dark mb-1">{{ comp.name }}</h5>
+                                        <span class="badge bg-info-subtle text-info-emphasis rounded-pill px-3 py-1 fw-medium">{{ comp.industry }}</span>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body py-4">
+                                <div class="row g-3 mb-3">
+                                    <div class="col-6">
+                                        <label class="text-muted small fw-semibold d-block">Headquarters / Location</label>
+                                        <span class="fw-bold text-dark"><i class="bi bi-geo-alt text-danger me-1"></i>{{ comp.location or 'Not Specified' }}</span>
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="text-muted small fw-semibold d-block">Website URL</label>
+                                        {% if comp.website %}
+                                        <a href="{{ comp.website }}" target="_blank" class="fw-bold text-primary text-decoration-none">
+                                            {{ comp.website }} <i class="bi bi-box-arrow-up-right ms-1"></i>
+                                        </a>
+                                        {% else %}
+                                        <span class="text-muted">—</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="text-muted small fw-semibold d-block">Description & Market Overview</label>
+                                    <p class="text-dark bg-light p-3 rounded small mb-0">{{ comp.description or 'No description provided for this competitor.' }}</p>
+                                </div>
+                                <small class="text-muted d-block mt-3">Added on {{ comp.created_at.strftime('%b %d, %Y') if comp.created_at else 'Recently' }}</small>
+                            </div>
+                            <div class="modal-footer border-0">
+                                <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Close</button>
+                                <button type="button" class="btn btn-primary-custom btn-sm px-3" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#editModal{{ comp.id }}">
+                                    Edit Profile
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Edit Modal -->
+                <div class="modal fade" id="editModal{{ comp.id }}" tabindex="-1">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content border-0 shadow">
+                            <div class="modal-header">
+                                <h5 class="modal-title fw-bold">Edit Competitor</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <form method="POST" action="{{ url_for('salman_competitors.edit_competitor', id=comp.id) }}">
+                                <div class="modal-body">
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-semibold">Competitor Name</label>
+                                        <input type="text" name="name" value="{{ comp.name }}" class="form-control" required>
+                                    </div>
+                                    <div class="row g-2 mb-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label small fw-semibold">Industry</label>
+                                            <select name="industry" class="form-select" required>
+                                                <option value="Technology" {% if comp.industry == 'Technology' %}selected{% endif %}>Technology</option>
+                                                <option value="Retail & E-commerce" {% if comp.industry == 'Retail & E-commerce' %}selected{% endif %}>Retail & E-commerce</option>
+                                                <option value="Healthcare & Pharma" {% if comp.industry == 'Healthcare & Pharma' %}selected{% endif %}>Healthcare & Pharma</option>
+                                                <option value="Finance & Banking" {% if comp.industry == 'Finance & Banking' %}selected{% endif %}>Finance & Banking</option>
+                                                <option value="Consumer Electronics" {% if comp.industry == 'Consumer Electronics' %}selected{% endif %}>Consumer Electronics</option>
+                                                <option value="Food & Beverage" {% if comp.industry == 'Food & Beverage' %}selected{% endif %}>Food & Beverage</option>
+                                                <option value="Automotive" {% if comp.industry == 'Automotive' %}selected{% endif %}>Automotive</option>
+                                                <option value="Fashion & Apparel" {% if comp.industry == 'Fashion & Apparel' %}selected{% endif %}>Fashion & Apparel</option>
+                                                <option value="Real Estate" {% if comp.industry == 'Real Estate' %}selected{% endif %}>Real Estate</option>
+                                                <option value="Other" {% if comp.industry == 'Other' %}selected{% endif %}>Other</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label small fw-semibold">Website URL</label>
+                                            <input type="text" name="website" value="{{ comp.website or '' }}" class="form-control">
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-semibold">Location / Headquarters</label>
+                                        <input type="text" name="location" value="{{ comp.location or '' }}" class="form-control">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-semibold">Description</label>
+                                        <textarea name="description" class="form-control" rows="2">{{ comp.description or '' }}</textarea>
+                                    </div>
+                                </div>
+                                <div class="modal-footer border-0">
+                                    <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="submit" class="btn btn-primary-custom btn-sm px-3">Save Changes</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Delete Modal -->
+                <div class="modal fade" id="deleteModal{{ comp.id }}" tabindex="-1">
+                    <div class="modal-dialog modal-dialog-centered modal-sm">
+                        <div class="modal-content border-0 shadow">
+                            <div class="modal-body text-center p-4">
+                                <div class="text-danger mb-2"><i class="bi bi-exclamation-triangle fs-1"></i></div>
+                                <h6 class="fw-bold mb-2">Delete Competitor?</h6>
+                                <p class="text-muted small mb-3">Are you sure you want to remove <strong>{{ comp.name }}</strong>?</p>
+                                <div class="d-flex gap-2 justify-content-center">
+                                    <button type="button" class="btn btn-light btn-sm px-3" data-bs-dismiss="modal">Cancel</button>
+                                    <form method="POST" action="{{ url_for('salman_competitors.delete_competitor', id=comp.id) }}">
+                                        <button type="submit" class="btn btn-danger btn-sm px-3">Delete</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <div class="bg-light rounded-circle d-inline-flex p-3 text-muted mb-3">
+            <i class="bi bi-building fs-2"></i>
+        </div>
+        <h5 class="fw-bold text-dark mb-1">No Competitors Tracked Yet</h5>
+        <p class="text-muted small mb-3">Add your first market rival to begin tracking real-time insights.</p>
+        <button class="btn btn-primary-custom btn-sm px-3" data-bs-toggle="modal" data-bs-target="#addCompetitorModal">
+            + Add First Competitor
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Add Competitor Modal -->
+<div class="modal fade" id="addCompetitorModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="bg-primary text-white rounded p-2"><i class="bi bi-building"></i></div>
+                    <div>
+                        <h5 class="modal-title fw-bold mb-0">Competitor Profile</h5>
+                        <small class="text-muted">General information and core tracking details.</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('salman_competitors.add_competitor') }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Competitor Name</label>
+                        <input type="text" name="name" class="form-control" placeholder="e.g. Acme Corp" required>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Industry</label>
+                            <select name="industry" class="form-select" required>
+                                <option value="">Select Industry...</option>
+                                <option value="Technology">Technology</option>
+                                <option value="Retail & E-commerce">Retail & E-commerce</option>
+                                <option value="Healthcare & Pharma">Healthcare & Pharma</option>
+                                <option value="Finance & Banking">Finance & Banking</option>
+                                <option value="Consumer Electronics">Consumer Electronics</option>
+                                <option value="Food & Beverage">Food & Beverage</option>
+                                <option value="Automotive">Automotive</option>
+                                <option value="Fashion & Apparel">Fashion & Apparel</option>
+                                <option value="Real Estate">Real Estate</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Website URL</label>
+                            <input type="text" name="website" class="form-control" placeholder="https://">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Headquarters / Location</label>
+                        <input type="text" name="location" class="form-control" placeholder="City, Country">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Description</label>
+                        <textarea name="description" class="form-control" rows="3" placeholder="Brief overview of competitor market position..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary-custom btn-sm px-4">Save Competitor</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

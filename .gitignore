@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+eggs/
+*.egg
+
+# Virtual Environment
+venv/
+env/
+.venv/
+
+# Flask
+instance/
+*.db
+
+# Environment Variables
+.env
+.env.local
+.env.production
+
+# IDE
+/.idea
+/.vscode
+/.fleet
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node (if using any frontend build tools)
+node_modules/

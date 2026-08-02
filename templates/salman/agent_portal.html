@@ -1,0 +1,122 @@
+{% extends 'layout.html' %}
+
+{% block title %}Field Agent Workspace — MarketMind{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1">My Assigned Tasks</h2>
+        <p class="text-muted small mb-0">Welcome Agent <strong>{{ current_user.username }}</strong>. View tasks assigned to you by your business manager.</p>
+    </div>
+    <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 px-3 py-2 fw-semibold">
+        <i class="bi bi-person-badge me-1"></i> Field Agent Portal
+    </span>
+</div>
+
+<!-- Task Table Card for Agent -->
+<div class="card card-custom p-4 bg-white">
+    {% if tasks %}
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light text-uppercase small text-muted">
+                <tr>
+                    <th scope="col" class="py-3">Task Title & Target</th>
+                    <th scope="col" class="py-3">Status</th>
+                    <th scope="col" class="py-3">Instructions</th>
+                    <th scope="col" class="py-3 text-end">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for task in tasks %}
+                {% set target_comp = competitor_map.get(task.competitor_id) %}
+                <tr>
+                    <td class="py-3 cursor-pointer" data-bs-toggle="modal" data-bs-target="#agentTaskModal{{ task.id }}">
+                        <a href="javascript:void(0)" class="fw-bold text-dark text-decoration-none hover-primary d-block fs-6">{{ task.title }}</a>
+                        <small class="text-muted"><i class="bi bi-building text-primary me-1"></i>Target: {{ target_comp.name if target_comp else 'Competitor #' ~ task.competitor_id }}</small>
+                    </td>
+                    <td>
+                        {% if task.status == 'Assigned' %}
+                        <span class="badge bg-secondary-subtle text-secondary rounded-pill px-3 py-1 fw-medium">Assigned</span>
+                        {% elif task.status == 'In Progress' %}
+                        <span class="badge bg-warning-subtle text-warning-emphasis rounded-pill px-3 py-1 fw-medium">In Progress</span>
+                        {% else %}
+                        <span class="badge bg-success-subtle text-success-emphasis rounded-pill px-3 py-1 fw-medium">Completed</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="text-muted small text-truncate d-inline-block" style="max-width: 320px;">
+                            {{ task.description or 'No specific instructions provided.' }}
+                        </span>
+                    </td>
+                    <td class="text-end">
+                        <button class="btn btn-outline-primary btn-sm rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#agentTaskModal{{ task.id }}">
+                            <i class="bi bi-eye me-1"></i> View Details
+                        </button>
+                    </td>
+                </tr>
+
+                <!-- Read-Only Agent Task Details Modal -->
+                <div class="modal fade" id="agentTaskModal{{ task.id }}" tabindex="-1">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content border-0 shadow">
+                            <div class="modal-header border-bottom">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="bg-primary text-white rounded p-2"><i class="bi bi-card-checklist"></i></div>
+                                    <div>
+                                        <h5 class="modal-title fw-bold mb-0 text-dark">{{ task.title }}</h5>
+                                        <small class="text-muted">Task ID #{{ task.id }}</small>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body py-4">
+                                <div class="row g-3 mb-3">
+                                    <div class="col-6">
+                                        <label class="text-muted small fw-semibold d-block">Target Competitor</label>
+                                        <span class="fw-bold text-dark"><i class="bi bi-building text-primary me-1"></i>{{ target_comp.name if target_comp else 'Competitor #' ~ task.competitor_id }}</span>
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="text-muted small fw-semibold d-block">Current Task Status</label>
+                                        {% if task.status == 'Assigned' %}
+                                        <span class="badge bg-secondary-subtle text-secondary rounded-pill px-3 py-1 fw-medium">Assigned</span>
+                                        {% elif task.status == 'In Progress' %}
+                                        <span class="badge bg-warning-subtle text-warning-emphasis rounded-pill px-3 py-1 fw-medium">In Progress</span>
+                                        {% else %}
+                                        <span class="badge bg-success-subtle text-success-emphasis rounded-pill px-3 py-1 fw-medium">Completed</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="text-muted small fw-semibold d-block">Task Instructions</label>
+                                    <p class="text-dark bg-light p-3 rounded small mb-0">{{ task.description or 'No instructions provided.' }}</p>
+                                </div>
+                                {% if task.onsite_notes %}
+                                <div class="mb-2">
+                                    <label class="text-muted small fw-semibold d-block">Audit Findings & Notes</label>
+                                    <p class="text-dark bg-light p-3 rounded small mb-0">{{ task.onsite_notes }}</p>
+                                </div>
+                                {% endif %}
+                                <small class="text-muted d-block mt-3">Assigned on {{ task.created_at.strftime('%b %d, %Y') if task.created_at else 'Recently' }}</small>
+                            </div>
+                            <div class="modal-footer border-0">
+                                <button type="button" class="btn btn-secondary btn-sm px-4" data-bs-dismiss="modal">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <div class="bg-light rounded-circle d-inline-flex p-3 text-muted mb-3">
+            <i class="bi bi-card-checklist fs-2"></i>
+        </div>
+        <h5 class="fw-bold text-dark mb-1">No Active Tasks Assigned to You</h5>
+        <p class="text-muted small mb-0">Your business manager has not assigned any field research tasks to your account yet.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

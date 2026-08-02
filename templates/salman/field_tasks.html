@@ -1,0 +1,276 @@
+{% extends 'layout.html' %}
+
+{% block title %}Field Task Assignment & GPS Tracking — MarketMind{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1">Field Research Tasks</h2>
+        <p class="text-muted small mb-0">Assign on-site competitor audit tasks and track live agent GPS locations.</p>
+    </div>
+    <div class="mt-3 mt-md-0">
+        <button class="btn btn-primary-custom px-3 py-2 shadow-sm d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#addTaskModal">
+            <i class="bi bi-plus-lg fs-6"></i> Assign New Task
+        </button>
+    </div>
+</div>
+
+<!-- Stat Counters -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card card-custom p-3 bg-white">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="text-muted small fw-semibold d-block">Total Tasks</span>
+                    <h3 class="fw-bold mb-0 text-dark">{{ total_tasks }}</h3>
+                </div>
+                <div class="bg-primary bg-opacity-10 text-primary rounded-3 p-3">
+                    <i class="bi bi-card-checklist fs-4"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card card-custom p-3 bg-white">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="text-muted small fw-semibold d-block">Assigned</span>
+                    <h3 class="fw-bold mb-0 text-secondary">{{ assigned_count }}</h3>
+                </div>
+                <div class="bg-secondary bg-opacity-10 text-secondary rounded-3 p-3">
+                    <i class="bi bi-clock-history fs-4"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card card-custom p-3 bg-white">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="text-muted small fw-semibold d-block">In Progress</span>
+                    <h3 class="fw-bold mb-0 text-warning">{{ in_progress_count }}</h3>
+                </div>
+                <div class="bg-warning bg-opacity-10 text-warning rounded-3 p-3">
+                    <i class="bi bi-geo-alt fs-4"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card card-custom p-3 bg-white">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="text-muted small fw-semibold d-block">Completed</span>
+                    <h3 class="fw-bold mb-0 text-success">{{ completed_count }}</h3>
+                </div>
+                <div class="bg-success bg-opacity-10 text-success rounded-3 p-3">
+                    <i class="bi bi-check-circle fs-4"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Task Table Card -->
+<div class="card card-custom p-4 bg-white">
+    {% if tasks %}
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light text-uppercase small text-muted">
+                <tr>
+                    <th scope="col" class="py-3">Task Title & Target</th>
+                    <th scope="col" class="py-3">Assigned Agent</th>
+                    <th scope="col" class="py-3">Status</th>
+                    <th scope="col" class="py-3">Agent GPS Location</th>
+                    <th scope="col" class="py-3 text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for task in tasks %}
+                {% set assigned_user = user_map.get(task.assigned_to_id) %}
+                {% set target_comp = competitor_map.get(task.competitor_id) %}
+                <tr>
+                    <td class="py-3 cursor-pointer" data-bs-toggle="modal" data-bs-target="#viewTaskModal{{ task.id }}">
+                        <a href="javascript:void(0)" class="fw-bold text-dark text-decoration-none hover-primary d-block">{{ task.title }}</a>
+                        <small class="text-muted"><i class="bi bi-building me-1"></i>Target: {{ target_comp.name if target_comp else 'Competitor #' ~ task.competitor_id }}</small>
+                    </td>
+                    <td>
+                        <span class="badge bg-light text-dark border px-2.5 py-1">
+                            <i class="bi bi-person-circle me-1 text-primary"></i>{{ assigned_user.username if assigned_user else 'User #' ~ task.assigned_to_id }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if task.status == 'Assigned' %}
+                        <span class="badge bg-secondary-subtle text-secondary rounded-pill px-3 py-1 fw-medium">Assigned</span>
+                        {% elif task.status == 'In Progress' %}
+                        <span class="badge bg-warning-subtle text-warning-emphasis rounded-pill px-3 py-1 fw-medium">In Progress</span>
+                        {% else %}
+                        <span class="badge bg-success-subtle text-success-emphasis rounded-pill px-3 py-1 fw-medium">Completed</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge bg-light text-muted border px-2.5 py-1 font-monospace"><i class="bi bi-geo-alt-fill text-danger me-1"></i>Member 3 GPS Stream</span>
+                    </td>
+                    <td class="text-end">
+                        <button class="btn btn-light btn-sm text-primary rounded-circle me-1" data-bs-toggle="modal" data-bs-target="#viewTaskModal{{ task.id }}" title="View Task Details">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                        <button class="btn btn-light btn-sm text-muted rounded-circle" data-bs-toggle="modal" data-bs-target="#statusModal{{ task.id }}" title="Update Status & Notes">
+                            <i class="bi bi-pencil-square"></i>
+                        </button>
+                    </td>
+                </tr>
+
+                <!-- Task Details Modal -->
+                <div class="modal fade" id="viewTaskModal{{ task.id }}" tabindex="-1">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content border-0 shadow">
+                            <div class="modal-header border-bottom pb-3">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="bg-primary text-white rounded p-2"><i class="bi bi-card-checklist"></i></div>
+                                    <div>
+                                        <h5 class="modal-title fw-bold mb-0 text-dark">{{ task.title }}</h5>
+                                        <small class="text-muted">Task Record #{{ task.id }}</small>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body py-4">
+                                <div class="row g-3 mb-3">
+                                    <div class="col-6">
+                                        <label class="text-muted small fw-semibold d-block">Target Competitor</label>
+                                        <span class="fw-bold text-dark"><i class="bi bi-building text-primary me-1"></i>{{ target_comp.name if target_comp else 'Competitor #' ~ task.competitor_id }}</span>
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="text-muted small fw-semibold d-block">Assigned Field Agent</label>
+                                        <span class="fw-bold text-dark"><i class="bi bi-person-badge text-info me-1"></i>{{ assigned_user.username if assigned_user else 'User #' ~ task.assigned_to_id }} ({{ assigned_user.role if assigned_user else 'Agent' }})</span>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="text-muted small fw-semibold d-block">Task Status</label>
+                                    {% if task.status == 'Assigned' %}
+                                    <span class="badge bg-secondary-subtle text-secondary rounded-pill px-3 py-1 fw-medium">Assigned</span>
+                                    {% elif task.status == 'In Progress' %}
+                                    <span class="badge bg-warning-subtle text-warning-emphasis rounded-pill px-3 py-1 fw-medium">In Progress</span>
+                                    {% else %}
+                                    <span class="badge bg-success-subtle text-success-emphasis rounded-pill px-3 py-1 fw-medium">Completed</span>
+                                    {% endif %}
+                                </div>
+                                <div class="mb-3">
+                                    <label class="text-muted small fw-semibold d-block">Task Instructions & Description</label>
+                                    <p class="text-dark bg-light p-3 rounded small mb-0">{{ task.description or 'No instructions provided.' }}</p>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="text-muted small fw-semibold d-block">On-Site Audit Notes</label>
+                                    <p class="text-dark bg-light p-3 rounded small mb-0">{{ task.onsite_notes or 'No audit notes entered yet.' }}</p>
+                                </div>
+                                <small class="text-muted d-block mt-3">Assigned on {{ task.created_at.strftime('%b %d, %Y') if task.created_at else 'Recently' }}</small>
+                            </div>
+                            <div class="modal-footer border-0">
+                                <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Close</button>
+                                <button type="button" class="btn btn-primary-custom btn-sm px-3" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#statusModal{{ task.id }}">
+                                    Update Status & Notes
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Update Status Modal -->
+                <div class="modal fade" id="statusModal{{ task.id }}" tabindex="-1">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content border-0 shadow">
+                            <div class="modal-header">
+                                <h5 class="modal-title fw-bold">Update Task Status & Audit Notes</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <form method="POST" action="{{ url_for('salman_field_tasks.update_status', id=task.id) }}">
+                                <div class="modal-body">
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-semibold">Task Status</label>
+                                        <select name="status" class="form-select">
+                                            <option value="Assigned" {% if task.status == 'Assigned' %}selected{% endif %}>Assigned</option>
+                                            <option value="In Progress" {% if task.status == 'In Progress' %}selected{% endif %}>In Progress</option>
+                                            <option value="Completed" {% if task.status == 'Completed' %}selected{% endif %}>Completed</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-semibold">On-Site Audit Notes</label>
+                                        <textarea name="onsite_notes" class="form-control" rows="3" placeholder="Enter findings from store visit...">{{ task.onsite_notes or '' }}</textarea>
+                                    </div>
+                                </div>
+                                <div class="modal-footer border-0">
+                                    <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="submit" class="btn btn-primary-custom btn-sm px-3">Update Task</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <div class="bg-light rounded-circle d-inline-flex p-3 text-muted mb-3">
+            <i class="bi bi-card-checklist fs-2"></i>
+        </div>
+        <h5 class="fw-bold text-dark mb-1">No Field Tasks Assigned Yet</h5>
+        <p class="text-muted small mb-3">Assign on-site store audit tasks to field research agents.</p>
+        <button class="btn btn-primary-custom btn-sm px-3" data-bs-toggle="modal" data-bs-target="#addTaskModal">
+            + Assign First Task
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Assign Task Modal -->
+<div class="modal fade" id="addTaskModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">Assign Field Research Task</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('salman_field_tasks.add_task') }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Task Title</label>
+                        <input type="text" name="title" class="form-control" placeholder="e.g. Audit Outlet Price Tags & Foot Traffic" required>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Target Competitor</label>
+                            <select name="competitor_id" class="form-select" required>
+                                <option value="">Select Competitor...</option>
+                                {% for comp in competitors %}
+                                <option value="{{ comp.id }}">{{ comp.name }} ({{ comp.industry }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Assign Agent (User)</label>
+                            <select name="assigned_to_id" class="form-select" required>
+                                <option value="">Select User...</option>
+                                {% for u in users %}
+                                <option value="{{ u.id }}">{{ u.username }} ({{ u.role }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Instructions / Description</label>
+                        <textarea name="description" class="form-control" rows="3" placeholder="Provide specific instructions for field agent..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary-custom btn-sm px-4">Assign Task</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
