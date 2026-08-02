@@ -98,15 +98,19 @@ News Articles, Field Tasks, Task Location Logs, AI Analyses, Reports,
 Companion Chat Messages
 
 ================================================================================
-7. SYSTEM ROLES
+7. SYSTEM ROLES & ACCESS CONTROL
 ================================================================================
 
-Admin         — Manage users, industries, competitor database, view system analytics
-Business User — Create workspace, add/track competitors, assign tasks, view dashboard,
-                generate reports, receive AI recommendations
+Business Owner — Creates a business workspace, generates a unique Business Join Code
+                 (e.g., BIZ8842), manages competitor profiles, assigns field audit
+                 tasks to enrolled agents, views executive dashboard & reports.
 
-Note: Login/Signup/Logout/SSO/Role Management/Profile Management are common
-workflow and NOT counted as features.
+Field Agent    — Enrolls in an existing business workspace using the Business Join Code
+                 on registration. Accesses dedicated Field Agent Portal (/salman/field-tasks/my-tasks)
+                 to view assigned store research task details.
+
+Note: Login/Signup/Logout/Role Isolation are common workflow & workspace infrastructure,
+not counted as separate individual features.
 
 ================================================================================
 8. GIT WORKFLOW RULES (FOLLOW STRICTLY)
