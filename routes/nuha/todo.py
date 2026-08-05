@@ -11,7 +11,7 @@ todo_bp = Blueprint('nuha_todo', __name__, url_prefix='/nuha/todo')
 @todo_bp.route('/')
 @login_required
 def index():
-    if current_user.role != 'Business Owner':
+    if current_user.role not in ['Business Owner', 'Business User']:
         flash('Access denied.', 'danger')
         return redirect(url_for('auth.dashboard'))
 
@@ -39,7 +39,7 @@ def index():
 @todo_bp.route('/create', methods=['POST'])
 @login_required
 def create():
-    if current_user.role != 'Business Owner':
+    if current_user.role not in ['Business Owner', 'Business User']:
         return redirect(url_for('auth.dashboard'))
 
     business = current_user.user_business

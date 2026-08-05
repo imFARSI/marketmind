@@ -79,7 +79,7 @@ def fetch_and_save_news(query, business_id, competitor_id=None, page_size=12):
 @news_bp.route('/')
 @login_required
 def index():
-    if current_user.role != 'Business Owner':
+    if current_user.role not in ['Business Owner', 'Business User']:
         flash('Access denied. Only Business Owners can access News Monitoring.', 'danger')
         return redirect(url_for('auth.dashboard'))
 
@@ -112,7 +112,7 @@ def index():
 @news_bp.route('/fetch', methods=['POST'])
 @login_required
 def fetch():
-    if current_user.role != 'Business Owner':
+    if current_user.role not in ['Business Owner', 'Business User']:
         flash('Access denied.', 'danger')
         return redirect(url_for('auth.dashboard'))
 

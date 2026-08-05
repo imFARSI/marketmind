@@ -15,7 +15,7 @@ EMAIL_REGEX = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
 @login_required
 def index():
     # Only Business Owners are authorized to view or configure the workspace
-    if current_user.role != 'Business Owner':
+    if current_user.role not in ['Business Owner', 'Business User']:
         flash('Access denied. Only Business Owners can access Workspace Configuration.', 'danger')
         return redirect(url_for('auth.dashboard'))
 
