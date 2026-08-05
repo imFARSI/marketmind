@@ -1,0 +1,414 @@
+{% extends 'layout.html' %}
+
+{% block title %}Finance & Meetings — MarketMind{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1">Finance & Meetings</h2>
+    </div>
+</div>
+
+<!-- Main Top Segmented Option Toggle (Meeting Management vs Business Expense Management) -->
+<div class="card card-custom p-2.5 bg-white mb-4 shadow-sm border-0">
+    <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3">
+        <div class="btn-group p-1 bg-light rounded-pill border w-100 w-sm-auto" role="group">
+            <button type="button" id="tabBtnMeetings" class="btn btn-sm rounded-pill px-4 fw-bold btn-primary-custom" onclick="switchOpTab('meetings')">
+                <i class="bi bi-calendar-event me-1.5"></i> Meeting Management
+            </button>
+            <button type="button" id="tabBtnExpenses" class="btn btn-sm rounded-pill px-4 fw-bold btn-outline-secondary border-0" onclick="switchOpTab('expenses')">
+                <i class="bi bi-calculator me-1.5"></i> Business Expense Management
+            </button>
+        </div>
+
+        <!-- Year & Month Selectors (Shown for Expenses) -->
+        <div id="yearSelectorBox" class="d-none align-items-center gap-2">
+            <form method="GET" action="{{ url_for('salman_finance_meetings.index') }}" class="d-flex align-items-center gap-2">
+                <label class="form-label mb-0 fw-semibold text-muted small">Month:</label>
+                <select name="month" class="form-select form-select-sm rounded-pill fw-bold" onchange="this.form.submit()">
+                    <option value="All" {% if selected_month == 'All' %}selected{% endif %}>All Months</option>
+                    {% for m in months %}
+                    <option value="{{ m }}" {% if selected_month == m %}selected{% endif %}>{{ m }}</option>
+                    {% endfor %}
+                </select>
+
+                <label class="form-label mb-0 fw-semibold text-muted small ms-2">Year:</label>
+                <select name="year" class="form-select form-select-sm rounded-pill fw-bold" onchange="this.form.submit()">
+                    {% for y in years %}
+                    <option value="{{ y }}" {% if selected_year == y %}selected{% endif %}>{{ y }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================================== -->
+<!-- OPTION 1: MEETING MANAGEMENT (FULL-WIDTH VIEW) -->
+<!-- ============================================================================== -->
+<div id="viewMeetingsSection">
+    <div class="card card-custom p-4 bg-white shadow-sm border-0">
+        <div class="d-flex align-items-center justify-content-between mb-4 pb-3 border-bottom">
+            <div>
+                <h4 class="fw-bold mb-1"><i class="bi bi-calendar-event text-primary me-2"></i> Meeting Management Hub</h4>
+                <p class="text-muted small mb-0">Create, edit, and track executive meetings and end active sessions.</p>
+            </div>
+            <button type="button" class="btn btn-primary-custom" data-bs-toggle="modal" data-bs-target="#addMeetingModal">
+                <i class="bi bi-plus-lg me-1.5"></i> Schedule Meeting
+            </button>
+        </div>
+
+        {% if meetings %}
+            <div class="row g-3">
+                {% for m in meetings %}
+                <div class="col-md-6 col-lg-4">
+                    <div class="card card-custom p-3.5 bg-white border h-100 d-flex flex-column justify-content-between shadow-sm">
+                        <div>
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h6 class="fw-bold text-dark mb-0 fs-6">{{ m.title }}</h6>
+                                <span class="badge {% if m.status == 'Done' %}bg-success{% else %}bg-primary{% endif %} rounded-pill fs-7">
+                                    {{ m.status }}
+                                </span>
+                            </div>
+
+                            <div class="text-muted small mb-3">
+                                <div><i class="bi bi-clock text-primary me-1.5"></i> <strong>{{ m.date_time }}</strong></div>
+                                <div class="mt-1"><i class="bi bi-geo-alt text-info me-1.5"></i> {{ m.location }}</div>
+                            </div>
+
+                            {% if m.agenda %}
+                            <div class="p-2.5 bg-light rounded-3 border text-secondary small mb-3">
+                                <strong>Agenda:</strong> {{ m.agenda }}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="d-flex align-items-center justify-content-between pt-2.5 border-top">
+                            <!-- Toggle Status Button (Upcoming <-> Done) -->
+                            <form method="POST" action="{{ url_for('salman_finance_meetings.toggle_meeting_status', id=m.id) }}">
+                                <button type="submit" class="btn {% if m.status == 'Done' %}btn-outline-secondary{% else %}btn-outline-success{% endif %} btn-sm rounded-pill px-3 py-1 fs-7">
+                                    {% if m.status == 'Done' %}
+                                    <i class="bi bi-arrow-counterclockwise me-1"></i> Mark Upcoming
+                                    {% else %}
+                                    <i class="bi bi-check-circle me-1"></i> Mark Done
+                                    {% endif %}
+                                </button>
+                            </form>
+
+                            <div class="d-flex align-items-center gap-1">
+                                <!-- Edit Meeting Button -->
+                                <button type="button" class="btn btn-link text-muted p-1 border-0" data-bs-toggle="modal" data-bs-target="#editMeetingModal{{ m.id }}" title="Edit Meeting">
+                                    <i class="bi bi-pencil-square fs-6"></i>
+                                </button>
+                                <!-- Delete Meeting Button -->
+                                <form method="POST" action="{{ url_for('salman_finance_meetings.delete_meeting', id=m.id) }}" onsubmit="return confirm('Delete this meeting?')">
+                                    <button type="submit" class="btn btn-link text-muted p-1 border-0" title="Delete"><i class="bi bi-trash fs-6"></i></button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal: Edit Meeting -->
+                <div class="modal fade" id="editMeetingModal{{ m.id }}" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content border-0 shadow-lg rounded-4">
+                            <div class="modal-header border-0 pb-0">
+                                <h5 class="modal-title fw-bold"><i class="bi bi-pencil-square text-primary me-2"></i>Edit Meeting</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <form method="POST" action="{{ url_for('salman_finance_meetings.edit_meeting', id=m.id) }}">
+                                <div class="modal-body pt-3">
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-semibold">Meeting Title</label>
+                                        <input type="text" name="title" class="form-control rounded-3" value="{{ m.title }}" required>
+                                    </div>
+                                    <div class="row g-2 mb-3">
+                                        <div class="col-6">
+                                            <label class="form-label small fw-semibold">Date & Time</label>
+                                            <input type="text" name="date_time" class="form-control rounded-3" value="{{ m.date_time }}" required>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label small fw-semibold">Location / Link</label>
+                                            <input type="text" name="location" class="form-control rounded-3" value="{{ m.location }}">
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-semibold">Status</label>
+                                        <select name="status" class="form-select rounded-3">
+                                            <option value="Upcoming" {% if m.status == 'Upcoming' %}selected{% endif %}>Upcoming</option>
+                                            <option value="Done" {% if m.status == 'Done' %}selected{% endif %}>Done</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-2">
+                                        <label class="form-label small fw-semibold">Agenda Notes</label>
+                                        <textarea name="agenda" class="form-control rounded-3" rows="3">{{ m.agenda }}</textarea>
+                                    </div>
+                                </div>
+                                <div class="modal-footer border-0 pt-0">
+                                    <button type="button" class="btn btn-light rounded-pill px-3" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="submit" class="btn btn-primary-custom rounded-pill px-4">Update Meeting</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-calendar-x fs-1 opacity-50 mb-2 d-block"></i>
+                <h5>No scheduled meetings found.</h5>
+                <p class="small mb-0">Click "Schedule Meeting" to create your first meeting.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ============================================================================== -->
+<!-- OPTION 2: BUSINESS EXPENSE MANAGEMENT (FULL-WIDTH VIEW) -->
+<!-- ============================================================================== -->
+<div id="viewExpensesSection" class="d-none">
+    <!-- Executive KPI Summary Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm rounded-4 p-3.5 bg-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted fs-7 uppercase font-semibold">Total Revenue ({% if selected_month == 'All' %}Full {{ selected_year }}{% else %}{{ selected_month }} {{ selected_year }}{% endif %})</div>
+                        <div class="fw-bold text-success fs-2 mt-1">${{ "{:,.2f}".format(total_revenue) }}</div>
+                    </div>
+                    <div class="bg-success bg-opacity-10 text-success rounded-circle p-3">
+                        <i class="bi bi-graph-up-arrow fs-3"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm rounded-4 p-3.5 bg-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted fs-7 uppercase font-semibold">Total Expense ({% if selected_month == 'All' %}Full {{ selected_year }}{% else %}{{ selected_month }} {{ selected_year }}{% endif %})</div>
+                        <div class="fw-bold text-danger fs-2 mt-1">${{ "{:,.2f}".format(total_expense) }}</div>
+                    </div>
+                    <div class="bg-danger bg-opacity-10 text-danger rounded-circle p-3">
+                        <i class="bi bi-graph-down-arrow fs-3"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm rounded-4 p-3.5 bg-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted fs-7 uppercase font-semibold">Net Profit / Margin</div>
+                        <div class="fw-bold fs-2 mt-1 {% if net_profit >= 0 %}text-primary{% else %}text-warning{% endif %}">
+                            ${{ "{:,.2f}".format(net_profit) }}
+                        </div>
+                    </div>
+                    <div class="{% if net_profit >= 0 %}bg-primary bg-opacity-10 text-primary{% else %}bg-warning bg-opacity-10 text-warning{% endif %} rounded-circle p-3">
+                        <i class="bi bi-wallet2 fs-3"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Expense & Revenue Table -->
+    <div class="card card-custom p-4 bg-white shadow-sm border-0">
+        <div class="d-flex align-items-center justify-content-between mb-4 pb-3 border-bottom">
+            <div>
+                <h4 class="fw-bold mb-1"><i class="bi bi-cash-coin text-success me-2"></i> Business Expense & Revenue Ledger</h4>
+                <p class="text-muted small mb-0">Track company expenditures, revenues, and profit calculations by month.</p>
+            </div>
+            <button type="button" class="btn btn-success rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#addExpenseModal">
+                <i class="bi bi-plus-lg me-1.5"></i> Log Entry
+            </button>
+        </div>
+
+        {% if financial_items %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Title / Description</th>
+                            <th>Category</th>
+                            <th>Month / Year</th>
+                            <th class="text-end">Amount</th>
+                            <th class="text-center">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in financial_items %}
+                        <tr>
+                            <td>
+                                <div class="fw-bold text-dark">{{ item.title }}</div>
+                                <span class="badge {% if item.type == 'Revenue' %}bg-success{% else %}bg-danger{% endif %} rounded-pill fs-7">
+                                    {{ item.type }}
+                                </span>
+                            </td>
+                            <td class="small text-muted">{{ item.category }}</td>
+                            <td class="small fw-semibold">{{ item.month }} {{ item.year }}</td>
+                            <td class="text-end fw-bold fs-6 {% if item.type == 'Revenue' %}text-success{% else %}text-danger{% endif %}">
+                                {% if item.type == 'Revenue' %}+{% else %}-{% endif %}${{ "{:,.2f}".format(item.amount) }}
+                            </td>
+                            <td class="text-center">
+                                <form method="POST" action="{{ url_for('salman_finance_meetings.delete_expense', id=item.id) }}" onsubmit="return confirm('Delete financial entry?')">
+                                    <button type="submit" class="btn btn-link text-muted p-1 border-0" title="Delete"><i class="bi bi-trash fs-6"></i></button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-journal-x fs-1 opacity-50 mb-2 d-block"></i>
+                <h5>No financial entries recorded.</h5>
+                <p class="small mb-0">Click "Log Entry" to add revenues or expenses for this period.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal: Schedule Meeting -->
+<div class="modal fade" id="addMeetingModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold"><i class="bi bi-calendar-plus text-primary me-2"></i>Schedule Business Meeting</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('salman_finance_meetings.add_meeting') }}">
+                <div class="modal-body pt-3">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Meeting Title</label>
+                        <input type="text" name="title" class="form-control rounded-3" placeholder="e.g., Weekly Executive Sync" required>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Date & Time</label>
+                            <input type="datetime-local" name="date_time" class="form-control rounded-3" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Location / Link</label>
+                            <input type="text" name="location" class="form-control rounded-3" placeholder="e.g., Google Meet" value="Google Meet">
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold">Agenda Notes</label>
+                        <textarea name="agenda" class="form-control rounded-3" rows="3" placeholder="Meeting agenda details..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light rounded-pill px-3" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary-custom rounded-pill px-4">Save Meeting</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Log Expense / Revenue -->
+<div class="modal fade" id="addExpenseModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold"><i class="bi bi-cash-stack text-success me-2"></i>Log Expense or Revenue</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('salman_finance_meetings.add_expense') }}">
+                <div class="modal-body pt-3">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Title / Item Description</label>
+                        <input type="text" name="title" class="form-control rounded-3" placeholder="e.g., Q1 Marketing Budget" required>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Entry Type</label>
+                            <select name="type" class="form-select rounded-3">
+                                <option value="Expense" selected>Expense (Cost)</option>
+                                <option value="Revenue">Revenue (Income)</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Category</label>
+                            <select name="category" class="form-select rounded-3">
+                                <option value="Marketing">Marketing</option>
+                                <option value="Operations">Operations</option>
+                                <option value="Payroll">Payroll</option>
+                                <option value="Software">Software</option>
+                                <option value="Sales">Sales</option>
+                                <option value="General" selected>General</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-4">
+                            <label class="form-label small fw-semibold">Amount ($)</label>
+                            <input type="number" step="0.01" name="amount" class="form-control rounded-3" placeholder="0.00" required>
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label small fw-semibold">Month</label>
+                            <select name="month" class="form-select rounded-3">
+                                {% for m in months %}
+                                <option value="{{ m }}" {% if selected_month == m or (selected_month == 'All' and m == 'Feb') %}selected{% endif %}>{{ m }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label small fw-semibold">Year</label>
+                            <select name="year" class="form-select rounded-3">
+                                {% for y in years %}
+                                <option value="{{ y }}" {% if selected_year == y %}selected{% endif %}>{{ y }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light rounded-pill px-3" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success rounded-pill px-4">Log Record</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function switchOpTab(mode) {
+        const viewMeetings = document.getElementById('viewMeetingsSection');
+        const viewExpenses = document.getElementById('viewExpensesSection');
+        const btnMeetings = document.getElementById('tabBtnMeetings');
+        const btnExpenses = document.getElementById('tabBtnExpenses');
+        const yearBox = document.getElementById('yearSelectorBox');
+
+        if (mode === 'meetings') {
+            viewMeetings.classList.remove('d-none');
+            viewExpenses.classList.add('d-none');
+            
+            btnMeetings.className = 'btn btn-sm rounded-pill px-4 fw-bold btn-primary-custom';
+            btnExpenses.className = 'btn btn-sm rounded-pill px-4 fw-bold btn-outline-secondary border-0';
+            yearBox.classList.add('d-none');
+            yearBox.classList.remove('d-flex');
+        } else {
+            viewExpenses.classList.remove('d-none');
+            viewMeetings.classList.add('d-none');
+
+            btnExpenses.className = 'btn btn-sm rounded-pill px-4 fw-bold btn-primary-custom';
+            btnMeetings.className = 'btn btn-sm rounded-pill px-4 fw-bold btn-outline-secondary border-0';
+            yearBox.classList.remove('d-none');
+            yearBox.classList.add('d-flex');
+        }
+    }
+
+    // Auto switch to Expense tab if URL params contain month/year filter
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('month') || urlParams.has('year')) {
+        switchOpTab('expenses');
+    }
+</script>
+{% endblock %}

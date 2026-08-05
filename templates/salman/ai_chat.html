@@ -1,0 +1,224 @@
+{% extends 'layout.html' %}
+
+{% block title %}AI Companion — MarketMind{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chat-container {
+        height: 540px;
+        overflow-y: auto;
+        border-radius: 12px;
+        background: #F8FAFC;
+        border: 1px solid var(--card-border);
+        padding: 1.5rem;
+    }
+    .message-bubble {
+        max-width: 80%;
+        padding: 0.85rem 1.15rem;
+        border-radius: 14px;
+        margin-bottom: 1rem;
+        font-size: 0.92rem;
+        line-height: 1.5;
+        white-space: pre-wrap;
+    }
+    .user-bubble {
+        background-color: #2563EB;
+        color: #FFFFFF;
+        margin-left: auto;
+        border-bottom-right-radius: 2px;
+    }
+    .ai-bubble {
+        background-color: #FFFFFF;
+        color: #1E293B;
+        border: 1px solid #E2E8F0;
+        margin-right: auto;
+        border-bottom-left-radius: 2px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1">AI Companion</h2>
+        <p class="text-muted small mb-0">Ask anything to your personal AI assistant.</p>
+    </div>
+    <div class="d-flex gap-2 mt-3 mt-md-0">
+        <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3" onclick="startNewFullPageChat()">
+            <i class="bi bi-plus-circle me-1"></i> New Chat
+        </button>
+        <form method="POST" action="{{ url_for('salman_ai_chat.clear_history') }}">
+            <button type="submit" class="btn btn-outline-secondary btn-sm rounded-pill px-3" onclick="return confirm('Delete all chat history from database?')">
+                <i class="bi bi-trash me-1"></i> Delete Chat
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Chat Log Box -->
+<div class="card card-custom p-0 bg-white mb-3">
+    <div class="chat-container" id="chatBox">
+        {% if messages %}
+            {% for msg in messages %}
+                {% if msg.sender.lower() == 'ai' %}
+                <div class="d-flex flex-column align-items-start mb-3">
+                    <div class="d-flex align-items-center gap-1.5 small text-muted mb-1 px-1">
+                        <i class="bi bi-robot text-primary"></i> <strong>MarketMind AI</strong> <span class="fs-7">• {{ msg.created_at.strftime('%H:%M') }}</span>
+                    </div>
+                    <div class="message-bubble ai-bubble">{{ msg.message }}</div>
+                </div>
+                {% else %}
+                <div class="d-flex flex-column align-items-end mb-3">
+                    <div class="d-flex align-items-center gap-1.5 small text-muted mb-1 px-1">
+                        <strong>{{ msg.sender }}</strong> <span class="fs-7">• {{ msg.created_at.strftime('%H:%M') }}</span>
+                    </div>
+                    <div class="message-bubble user-bubble">{{ msg.message }}</div>
+                </div>
+                {% endif %}
+            {% endfor %}
+        {% else %}
+        <div class="text-center py-5 my-4" id="emptyState">
+            <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex p-3 mb-3">
+                <i class="bi bi-robot fs-1"></i>
+            </div>
+            <h5 class="fw-bold text-dark mb-1">Hello! How can I assist you today?</h5>
+            <p class="text-muted small mb-0">Ask me anything general.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Chat Input Box -->
+    <div class="p-3 border-top bg-white rounded-bottom-4">
+        <form id="chatForm" class="d-flex gap-2 align-items-center">
+            <input type="text" id="promptInput" class="form-control rounded-pill px-4 py-2.5" placeholder="Ask AI Companion anything..." autocomplete="off" required>
+            <button type="submit" id="sendBtn" class="btn btn-primary-custom rounded-circle p-2.5 d-flex align-items-center justify-content-center shadow-sm" style="width: 44px; height: 44px;">
+                <i class="bi bi-send-fill fs-6"></i>
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const chatBox = document.getElementById('chatBox');
+    const chatForm = document.getElementById('chatForm');
+    const promptInput = document.getElementById('promptInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const emptyState = document.getElementById('emptyState');
+
+    function scrollToBottom() {
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+    scrollToBottom();
+
+    chatForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        const userText = promptInput.value.trim();
+        if (!userText) return;
+
+        if (emptyState) emptyState.remove();
+
+        const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const userHtml = `
+            <div class="d-flex flex-column align-items-end mb-3">
+                <div class="d-flex align-items-center gap-1.5 small text-muted mb-1 px-1">
+                    <strong>{{ current_user.username }}</strong> <span class="fs-7">• ${now}</span>
+                </div>
+                <div class="message-bubble user-bubble">${escapeHtml(userText)}</div>
+            </div>
+        `;
+        chatBox.insertAdjacentHTML('beforeend', userHtml);
+        promptInput.value = '';
+        scrollToBottom();
+
+        const loadingId = 'loading-' + Date.now();
+        const loadingHtml = `
+            <div class="d-flex flex-column align-items-start mb-3" id="${loadingId}">
+                <div class="d-flex align-items-center gap-1.5 small text-muted mb-1 px-1">
+                    <i class="bi bi-robot text-primary"></i> <strong>MarketMind AI</strong>
+                </div>
+                <div class="message-bubble ai-bubble text-muted d-flex align-items-center gap-2">
+                    <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                    <span>Thinking...</span>
+                </div>
+            </div>
+        `;
+        chatBox.insertAdjacentHTML('beforeend', loadingHtml);
+        scrollToBottom();
+
+        const formData = new FormData();
+        formData.append('prompt', userText);
+
+        fetch("{{ url_for('salman_ai_chat.send_message') }}", {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById(loadingId).remove();
+            if (data.ai_response) {
+                const aiHtml = `
+                    <div class="d-flex flex-column align-items-start mb-3">
+                        <div class="d-flex align-items-center gap-1.5 small text-muted mb-1 px-1">
+                            <i class="bi bi-robot text-primary"></i> <strong>MarketMind AI</strong> <span class="fs-7">• ${data.timestamp}</span>
+                        </div>
+                        <div class="message-bubble ai-bubble">${escapeHtml(data.ai_response)}</div>
+                    </div>
+                `;
+                chatBox.insertAdjacentHTML('beforeend', aiHtml);
+            } else {
+                const errHtml = `
+                    <div class="d-flex flex-column align-items-start mb-3">
+                        <div class="message-bubble ai-bubble text-danger border-danger">Error: Could not get response.</div>
+                    </div>
+                `;
+                chatBox.insertAdjacentHTML('beforeend', errHtml);
+            }
+            scrollToBottom();
+        })
+        .catch(err => {
+            document.getElementById(loadingId).remove();
+            const errHtml = `
+                <div class="d-flex flex-column align-items-start mb-3">
+                    <div class="message-bubble ai-bubble text-danger border-danger">Network Error. Please try again.</div>
+                </div>
+            `;
+            chatBox.insertAdjacentHTML('beforeend', errHtml);
+            scrollToBottom();
+        });
+    });
+
+    // Hide floating widget container on the full-page view to avoid duplicate UI
+    const floatWidget = document.getElementById('aiFloatingWidgetContainer');
+    if (floatWidget) floatWidget.style.display = 'none';
+
+    function startNewFullPageChat() {
+        if (chatBox) {
+            chatBox.innerHTML = `
+                <div class="text-center py-5 my-4" id="emptyState">
+                    <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex p-3 mb-3">
+                        <i class="bi bi-robot fs-1"></i>
+                    </div>
+                    <h5 class="fw-bold text-dark mb-1">New Chat Started</h5>
+                    <p class="text-muted small mb-0">Ask me anything general.</p>
+                </div>
+            `;
+        }
+        if (promptInput) {
+            promptInput.value = '';
+            promptInput.focus();
+        }
+    }
+
+    function escapeHtml(text) {
+        return text
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+</script>
+{% endblock %}

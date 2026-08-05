@@ -17,6 +17,13 @@ class User(UserMixin, db.Model):
     business_id = db.Column(db.Integer, db.ForeignKey('business.id'))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+    @property
+    def user_business(self):
+        b_id = getattr(self, 'business_id', None)
+        if b_id:
+            return Business.query.get(b_id)
+        return Business.query.filter_by(owner_id=self.id).first()
+
 class Business(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), nullable=False)
@@ -114,5 +121,26 @@ class CompanionMessage(db.Model):
     sender = db.Column(db.String(20), nullable=False)
     message = db.Column(db.Text, nullable=False)
     is_proactive = db.Column(db.Boolean, default=False)
+    business_id = db.Column(db.Integer, db.ForeignKey('business.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class Meeting(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(120), nullable=False)
+    date_time = db.Column(db.String(50), nullable=False)
+    location = db.Column(db.String(120), default='Online Meeting')
+    agenda = db.Column(db.Text)
+    status = db.Column(db.String(20), default='Scheduled') # 'Scheduled', 'In Progress', 'Ended'
+    business_id = db.Column(db.Integer, db.ForeignKey('business.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class Expense(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(120), nullable=False)
+    category = db.Column(db.String(50), default='General') # Marketing, Operations, Payroll, Software, Sales, General
+    type = db.Column(db.String(20), default='Expense') # 'Expense' vs 'Revenue'
+    amount = db.Column(db.Float, nullable=False, default=0.0)
+    month = db.Column(db.String(10), nullable=False, default='Jan') # Jan, Feb, Mar, etc.
+    year = db.Column(db.Integer, nullable=False, default=2026)
     business_id = db.Column(db.Integer, db.ForeignKey('business.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

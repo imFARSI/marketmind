@@ -281,23 +281,35 @@
                     <i class="bi bi-card-checklist"></i> My Assigned Tasks
                 </a>
                 {% else %}
-                <a href="{{ url_for('auth.dashboard') }}" class="nav-link {% if request.endpoint == 'auth.dashboard' %}active{% endif %}">
-                    <i class="bi bi-grid-1x2"></i> Dashboard
-                </a>
                 <a href="{{ url_for('salman_competitors.index') }}" class="nav-link {% if 'salman_competitors' in request.endpoint %}active{% endif %}">
                     <i class="bi bi-building"></i> Competitors
                 </a>
                 <a href="{{ url_for('salman_field_tasks.index') }}" class="nav-link {% if 'salman_field_tasks' in request.endpoint and request.endpoint != 'salman_field_tasks.my_tasks' %}active{% endif %}">
                     <i class="bi bi-card-checklist"></i> Field Tasks
                 </a>
+                <a href="{{ url_for('salman_finance_meetings.index') }}" class="nav-link {% if 'salman_finance_meetings' in request.endpoint %}active{% endif %}">
+                    <i class="bi bi-calculator"></i> Finance & Meetings
+                </a>
+                <a href="{{ url_for('salman_ai_chat.index') }}" class="nav-link {% if 'salman_ai_chat' in request.endpoint %}active{% endif %}">
+                    <i class="bi bi-robot"></i> AI Companion
+                </a>
                 {% endif %}
             </nav>
         </div>
 
-        <div class="sidebar-user">
-            <div class="user-name">{{ current_user.username }}</div>
-            <div class="user-role">{{ current_user.role }}</div>
-        </div>
+        <a href="{{ url_for('auth.profile') }}" class="sidebar-user card-custom border-0 p-3 m-3 bg-dark text-white rounded-3 shadow-sm text-decoration-none d-block" style="background-color: rgba(255,255,255,0.06) !important;" title="View User Profile & Business Join Code">
+            <div class="user-name d-flex align-items-center justify-content-between mb-1">
+                <span class="fw-bold text-white fs-6">{{ current_user.username }}</span>
+                <i class="bi bi-person-gear text-info fs-6"></i>
+            </div>
+            <div class="user-role text-light text-opacity-75 small">{{ current_user.role }}</div>
+            {% if current_user.user_business %}
+            <div class="mt-2 pt-2 border-top border-secondary text-info fs-7 d-flex align-items-center justify-content-between">
+                <span><i class="bi bi-key-fill me-1"></i> Code: <strong>{{ current_user.user_business.join_code }}</strong></span>
+                <i class="bi bi-copy text-white ms-1" style="cursor:pointer;" onclick="event.preventDefault(); event.stopPropagation(); navigator.clipboard.writeText('{{ current_user.user_business.join_code }}'); alert('Business Join Code copied: {{ current_user.user_business.join_code }}')" title="Copy Join Code"></i>
+            </div>
+            {% endif %}
+        </a>
     </aside>
 
     <!-- Main Workspace Area -->
@@ -311,6 +323,12 @@
             <div class="topbar-right">
                 <button class="topbar-icon-btn"><i class="bi bi-bell"></i></button>
                 <div class="topbar-brand-title">MarketMind</div>
+                <a href="{{ url_for('auth.profile') }}" class="d-flex align-items-center gap-2 ms-2 text-decoration-none" title="View User Profile">
+                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width: 34px; height: 34px; font-weight: 600; font-size: 0.9rem;">
+                        {{ current_user.username[:1].upper() }}
+                    </div>
+                    <span class="fw-semibold text-dark small me-1">{{ current_user.username }}</span>
+                </a>
                 <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-danger btn-sm rounded-pill px-3 ms-2">Logout</a>
             </div>
         </header>
@@ -334,12 +352,92 @@
         <!-- Footer -->
         <footer class="app-footer">
             <div><strong>MarketMind</strong> © 2026. All rights reserved.</div>
-            <div class="d-flex gap-3">
-                <a href="#" class="text-decoration-none text-muted">Privacy Policy</a>
-                <a href="#" class="text-decoration-none text-muted">Terms of Service</a>
-                <a href="#" class="text-decoration-none text-muted">Support</a>
-            </div>
         </footer>
+    </div>
+
+    <!-- Edit Profile Modal -->
+    <div class="modal fade" id="editProfileModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold">Edit Profile</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="POST" action="{{ url_for('auth.profile') }}">
+                    <div class="modal-body pt-3">
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold text-muted">Username / Display Name</label>
+                            <input type="text" name="username" class="form-control rounded-3" value="{{ current_user.username }}" required>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small fw-semibold text-muted mb-0">Role</label>
+                            <div class="fw-bold text-dark fs-6">{{ current_user.role }}</div>
+                        </div>
+                        {% if current_user.user_business %}
+                        <div class="mt-3 p-2.5 bg-light rounded-3 border">
+                            <small class="text-muted d-block mb-1">Business Join Code</small>
+                            <div class="d-flex align-items-center justify-content-between">
+                                <span class="fw-bold text-primary fs-6">{{ current_user.user_business.join_code }}</span>
+                                <button type="button" class="btn btn-outline-primary btn-sm px-2 py-0.5" onclick="navigator.clipboard.writeText('{{ current_user.user_business.join_code }}'); alert('Business Join Code copied!')">Copy</button>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="modal-footer border-0 pt-0">
+                        <button type="button" class="btn btn-light btn-sm rounded-pill px-3" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary-custom btn-sm px-4">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating AI Companion Chat Widget (Bottom Right) -->
+    <div id="aiFloatingWidgetContainer" style="position: fixed; bottom: 25px; right: 25px; z-index: 1050;">
+        <!-- Trigger Button -->
+        <button id="aiToggleBtn" class="btn btn-primary rounded-circle p-0 shadow-lg d-flex align-items-center justify-content-center border-0" style="width: 58px; height: 58px; background: linear-gradient(135deg, #2563EB, #1D4ED8); transition: transform 0.2s ease;">
+            <i class="bi bi-robot fs-3 text-white"></i>
+        </button>
+
+        <!-- Floating Chat Popup Window -->
+        <div id="aiChatWindow" class="card border-0 shadow-lg d-none" style="width: 360px; height: 490px; position: absolute; bottom: 70px; right: 0; border-radius: 16px; overflow: hidden; background: #FFFFFF; border: 1px solid var(--card-border);">
+            <!-- Header -->
+            <div class="card-header bg-dark text-white p-3 d-flex align-items-center justify-content-between border-0" style="background-color: #0B132B !important;">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="bg-primary bg-opacity-20 rounded p-1.5"><i class="bi bi-robot text-info"></i></div>
+                    <div>
+                        <h6 class="fw-bold mb-0 text-white" style="font-size: 0.95rem;">MindAI</h6>
+                        <small class="text-light text-opacity-75 fs-7">AI Assistant</small>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-1">
+                    <button class="btn btn-link text-light text-opacity-75 p-1 border-0" onclick="clearFloatingChat()" title="New Chat"><i class="bi bi-plus-circle fs-6"></i></button>
+                    <a href="{{ url_for('salman_ai_chat.index') }}" class="btn btn-link text-light text-opacity-75 p-1 border-0" title="Expand Full Page"><i class="bi bi-arrows-angle-expand fs-6"></i></a>
+                    <button class="btn btn-link text-light text-opacity-75 p-1 border-0" onclick="toggleAiWidget()" title="Minimize"><i class="bi bi-dash-lg fs-6"></i></button>
+                </div>
+            </div>
+
+            <!-- Chat Message Container -->
+            <div id="floatingChatBox" class="card-body p-3 overflow-y-auto" style="height: 350px; background-color: #F8FAFC;">
+                <div class="text-center py-4" id="floatingEmptyState">
+                    <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex p-3 mb-2">
+                        <i class="bi bi-robot fs-3"></i>
+                    </div>
+                    <h6 class="fw-bold text-dark mb-1" style="font-size: 0.9rem;">How can I assist you?</h6>
+                    <small class="text-muted d-block fs-7">Ask me anything general or request market tips.</small>
+                </div>
+            </div>
+
+            <!-- Footer Input Form -->
+            <div class="card-footer bg-white p-2.5 border-top">
+                <form id="floatingChatForm" class="d-flex gap-2 align-items-center">
+                    <input type="text" id="floatingPromptInput" class="form-control form-control-sm rounded-pill px-3" placeholder="Ask AI Companion..." autocomplete="off" required>
+                    <button type="submit" class="btn btn-primary btn-sm rounded-circle p-2 d-flex align-items-center justify-content-center shadow-sm" style="width: 34px; height: 34px;">
+                        <i class="bi bi-send-fill" style="font-size: 0.75rem;"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
     </div>
 
     {% else %}
@@ -376,6 +474,152 @@
     {% endif %}
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const aiToggleBtn = document.getElementById('aiToggleBtn');
+        const aiChatWindow = document.getElementById('aiChatWindow');
+        const floatingChatBox = document.getElementById('floatingChatBox');
+        const floatingChatForm = document.getElementById('floatingChatForm');
+        const floatingPromptInput = document.getElementById('floatingPromptInput');
+        const floatingEmptyState = document.getElementById('floatingEmptyState');
+
+        function toggleAiWidget() {
+            if (aiChatWindow.classList.contains('d-none')) {
+                aiChatWindow.classList.remove('d-none');
+                floatingPromptInput.focus();
+                loadFloatingHistory();
+            } else {
+                aiChatWindow.classList.add('d-none');
+            }
+        }
+
+        function loadFloatingHistory() {
+            fetch("{{ url_for('salman_ai_chat.get_history') }}")
+                .then(res => res.json())
+                .then(data => {
+                    if (data.messages && data.messages.length > 0) {
+                        if (floatingEmptyState) floatingEmptyState.remove();
+                        let html = '';
+                        data.messages.forEach(msg => {
+                            if (msg.sender.toLowerCase() === 'ai') {
+                                html += `
+                                    <div class="d-flex flex-column align-items-start mb-2.5">
+                                        <div class="small text-muted fs-7 mb-1">AI • ${msg.timestamp}</div>
+                                        <div class="p-2 px-3 rounded-3 bg-white border text-dark small shadow-sm" style="max-width: 85%; white-space: pre-wrap; line-height: 1.4;">${escapeWidgetHtml(msg.message)}</div>
+                                    </div>
+                                `;
+                            } else {
+                                html += `
+                                    <div class="d-flex flex-column align-items-end mb-2.5">
+                                        <div class="small text-muted fs-7 mb-1">${msg.sender} • ${msg.timestamp}</div>
+                                        <div class="p-2 px-3 rounded-3 text-white bg-primary small" style="max-width: 85%; line-height: 1.4;">${escapeWidgetHtml(msg.message)}</div>
+                                    </div>
+                                `;
+                            }
+                        });
+                        floatingChatBox.innerHTML = html;
+                        floatingChatBox.scrollTop = floatingChatBox.scrollHeight;
+                    }
+                })
+                .catch(() => {});
+        }
+
+        if (aiToggleBtn) {
+            aiToggleBtn.addEventListener('click', toggleAiWidget);
+        }
+
+        if (floatingChatForm) {
+            floatingChatForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+                const text = floatingPromptInput.value.trim();
+                if (!text) return;
+
+                if (floatingEmptyState) floatingEmptyState.remove();
+
+                const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const userHtml = `
+                    <div class="d-flex flex-column align-items-end mb-2.5">
+                        <div class="small text-muted fs-7 mb-1">${now}</div>
+                        <div class="p-2 px-3 rounded-3 text-white bg-primary small" style="max-width: 85%; line-height: 1.4;">${escapeWidgetHtml(text)}</div>
+                    </div>
+                `;
+                floatingChatBox.insertAdjacentHTML('beforeend', userHtml);
+                floatingPromptInput.value = '';
+                floatingChatBox.scrollTop = floatingChatBox.scrollHeight;
+
+                const loadingId = 'float-load-' + Date.now();
+                const loadingHtml = `
+                    <div class="d-flex flex-column align-items-start mb-2.5" id="${loadingId}">
+                        <div class="p-2 px-3 rounded-3 bg-light border text-muted small d-flex align-items-center gap-1.5" style="max-width: 85%;">
+                            <div class="spinner-border spinner-border-sm text-primary" style="width: 0.85rem; height: 0.85rem;" role="status"></div>
+                            <span>Thinking...</span>
+                        </div>
+                    </div>
+                `;
+                floatingChatBox.insertAdjacentHTML('beforeend', loadingHtml);
+                floatingChatBox.scrollTop = floatingChatBox.scrollHeight;
+
+                const formData = new FormData();
+                formData.append('prompt', text);
+
+                fetch("{{ url_for('salman_ai_chat.send_message') }}", {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(res => res.json())
+                .then(data => {
+                    const el = document.getElementById(loadingId);
+                    if (el) el.remove();
+                    if (data.ai_response) {
+                        const aiHtml = `
+                            <div class="d-flex flex-column align-items-start mb-2.5">
+                                <div class="small text-muted fs-7 mb-1">AI • ${data.timestamp}</div>
+                                <div class="p-2 px-3 rounded-3 bg-white border text-dark small shadow-sm" style="max-width: 85%; white-space: pre-wrap; line-height: 1.4;">${escapeWidgetHtml(data.ai_response)}</div>
+                            </div>
+                        `;
+                        floatingChatBox.insertAdjacentHTML('beforeend', aiHtml);
+                    }
+                    floatingChatBox.scrollTop = floatingChatBox.scrollHeight;
+                })
+                .catch(() => {
+                    const el = document.getElementById(loadingId);
+                    if (el) el.remove();
+                    floatingChatBox.scrollTop = floatingChatBox.scrollHeight;
+                });
+            });
+        }
+
+        function clearFloatingChat() {
+            if (confirm('Delete all chat history from database?')) {
+                fetch("{{ url_for('salman_ai_chat.clear_history') }}", { method: 'POST' })
+                    .then(() => {
+                        if (floatingChatBox) {
+                            floatingChatBox.innerHTML = `
+                                <div class="text-center py-4" id="floatingEmptyState">
+                                    <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex p-3 mb-2">
+                                        <i class="bi bi-robot fs-3"></i>
+                                    </div>
+                                    <h6 class="fw-bold text-dark mb-1" style="font-size: 0.9rem;">Chat Cleared</h6>
+                                    <small class="text-muted d-block fs-7">How can I help you today?</small>
+                                </div>
+                            `;
+                        }
+                        if (floatingPromptInput) {
+                            floatingPromptInput.value = '';
+                            floatingPromptInput.focus();
+                        }
+                    });
+            }
+        }
+
+        function escapeWidgetHtml(text) {
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+    </script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

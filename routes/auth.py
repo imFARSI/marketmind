@@ -34,7 +34,7 @@ def login():
             login_user(user)
             if user.role == 'Field Agent':
                 return redirect(url_for('salman_field_tasks.my_tasks'))
-            return redirect(url_for('auth.dashboard'))
+            return redirect(url_for('salman_competitors.index'))
     return render_template('auth/login.html')
 
 @auth_bp.route('/register', methods=['GET', 'POST'])
@@ -102,7 +102,7 @@ def register():
 
             login_user(new_user)
             flash(f'Business workspace created! Your Business Join Code is {code}', 'success')
-            return redirect(url_for('auth.dashboard'))
+            return redirect(url_for('salman_competitors.index'))
 
     return render_template('auth/register.html')
 
@@ -117,6 +117,29 @@ def logout():
 def dashboard():
     if current_user.role == 'Field Agent':
         return redirect(url_for('salman_field_tasks.my_tasks'))
-    
-    business = Business.query.filter_by(owner_id=current_user.id).first()
-    return render_template('auth/dashboard.html', business=business)
+    return redirect(url_for('salman_competitors.index'))
+
+@auth_bp.route('/profile', methods=['GET', 'POST'])
+@login_required
+def profile():
+    business = current_user.user_business
+    enrolled_agents = []
+    if business:
+        enrolled_agents = User.query.filter_by(business_id=business.id).filter(User.id != current_user.id).all()
+
+    if request.method == 'POST':
+        new_username = request.form.get('username', '').strip()
+        new_email = request.form.get('email', '').strip().lower()
+        if new_username:
+            existing = User.query.filter_by(username=new_username).first()
+            if existing and existing.id != current_user.id:
+                flash('Username is already taken.', 'danger')
+            else:
+                current_user.username = new_username
+                if new_email and re.match(EMAIL_REGEX, new_email):
+                    current_user.email = new_email
+                db.session.commit()
+                flash('Profile updated successfully!', 'success')
+                return redirect(url_for('auth.profile'))
+
+    return render_template('auth/profile.html', business=business, enrolled_agents=enrolled_agents)

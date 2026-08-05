@@ -7,6 +7,8 @@ from models import db, User
 from routes.auth import auth_bp
 from routes.salman.competitors import competitors_bp
 from routes.salman.field_tasks import field_tasks_bp
+from routes.salman.ai_chat import ai_chat_bp
+from routes.salman.finance_meetings import finance_meetings_bp
 from routes.nuha.workspace import workspace_bp
 from routes.mumtahenah.products import products_bp
 
@@ -32,6 +34,8 @@ def load_user(user_id):
 app.register_blueprint(auth_bp)
 app.register_blueprint(competitors_bp)
 app.register_blueprint(field_tasks_bp)
+app.register_blueprint(ai_chat_bp)
+app.register_blueprint(finance_meetings_bp)
 app.register_blueprint(workspace_bp)
 app.register_blueprint(products_bp)
 
