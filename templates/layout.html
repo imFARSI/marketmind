@@ -293,6 +293,15 @@
                 <a href="{{ url_for('salman_ai_chat.index') }}" class="nav-link {% if 'salman_ai_chat' in request.endpoint %}active{% endif %}">
                     <i class="bi bi-robot"></i> AI Companion
                 </a>
+                <a href="{{ url_for('nuha_workspace.index') }}" class="nav-link {% if 'nuha_workspace' in request.endpoint %}active{% endif %}">
+                    <i class="bi bi-gear"></i> Workspace Config
+                </a>
+                <a href="{{ url_for('nuha_news.index') }}" class="nav-link {% if 'nuha_news' in request.endpoint %}active{% endif %}">
+                    <i class="bi bi-newspaper"></i> News Monitor
+                </a>
+                <a href="{{ url_for('nuha_todo.index') }}" class="nav-link {% if 'nuha_todo' in request.endpoint %}active{% endif %}">
+                    <i class="bi bi-check2-square"></i> To-Do & Notes
+                </a>
                 {% endif %}
             </nav>
         </div>

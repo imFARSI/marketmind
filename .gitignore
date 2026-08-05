@@ -17,6 +17,7 @@ env/
 # Flask
 instance/
 *.db
+.env
 
 # PDF & Rule Documents
 *.pdf

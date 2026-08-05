@@ -10,6 +10,8 @@ from routes.salman.field_tasks import field_tasks_bp
 from routes.salman.ai_chat import ai_chat_bp
 from routes.salman.finance_meetings import finance_meetings_bp
 from routes.nuha.workspace import workspace_bp
+from routes.nuha.news import news_bp
+from routes.nuha.todo import todo_bp
 from routes.mumtahenah.products import products_bp
 
 load_dotenv()
@@ -37,6 +39,8 @@ app.register_blueprint(field_tasks_bp)
 app.register_blueprint(ai_chat_bp)
 app.register_blueprint(finance_meetings_bp)
 app.register_blueprint(workspace_bp)
+app.register_blueprint(news_bp)
+app.register_blueprint(todo_bp)
 app.register_blueprint(products_bp)
 
 if __name__ == '__main__':

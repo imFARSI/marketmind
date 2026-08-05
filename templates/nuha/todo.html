@@ -1,0 +1,112 @@
+{% extends 'layout.html' %}
+
+{% block title %}To-Do & Notes — MarketMind{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1">To-Do & Quick Notes</h2>
+        <p class="text-muted small mb-0">Manage your tasks, set reminders, and jot down quick notes.</p>
+    </div>
+    <div class="mt-3 mt-md-0">
+        <button class="btn btn-primary-custom rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#createModal">
+            <i class="bi bi-plus-lg me-2"></i>New Entry
+        </button>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Tasks Column -->
+    <div class="col-lg-4">
+        <div class="card card-custom border-0 shadow-sm h-100 bg-light">
+            <div class="card-header bg-transparent border-0 pt-4 pb-0">
+                <h5 class="fw-bold text-dark d-flex align-items-center">
+                    <i class="bi bi-check2-square text-primary me-2"></i>Tasks
+                    <span class="badge bg-secondary ms-auto rounded-pill">{{ tasks | length }}</span>
+                </h5>
+            </div>
+            <div class="card-body">
+                {% for note in tasks %}
+                    {% include 'nuha/_todo_card.html' %}
+                {% else %}
+                    <p class="text-muted small text-center mt-3">No active tasks.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Reminders Column -->
+    <div class="col-lg-4">
+        <div class="card card-custom border-0 shadow-sm h-100 bg-light">
+            <div class="card-header bg-transparent border-0 pt-4 pb-0">
+                <h5 class="fw-bold text-dark d-flex align-items-center">
+                    <i class="bi bi-bell text-warning me-2"></i>Reminders
+                    <span class="badge bg-secondary ms-auto rounded-pill">{{ reminders | length }}</span>
+                </h5>
+            </div>
+            <div class="card-body">
+                {% for note in reminders %}
+                    {% include 'nuha/_todo_card.html' %}
+                {% else %}
+                    <p class="text-muted small text-center mt-3">No reminders set.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Notes Column -->
+    <div class="col-lg-4">
+        <div class="card card-custom border-0 shadow-sm h-100 bg-light">
+            <div class="card-header bg-transparent border-0 pt-4 pb-0">
+                <h5 class="fw-bold text-dark d-flex align-items-center">
+                    <i class="bi bi-journal-text text-success me-2"></i>Quick Notes
+                    <span class="badge bg-secondary ms-auto rounded-pill">{{ quick_notes | length }}</span>
+                </h5>
+            </div>
+            <div class="card-body">
+                {% for note in quick_notes %}
+                    {% include 'nuha/_todo_card.html' %}
+                {% else %}
+                    <p class="text-muted small text-center mt-3">No quick notes yet.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Modal -->
+<div class="modal fade" id="createModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow" style="border-radius: 16px;">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Create New Entry</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('nuha_todo.create') }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-muted">Type</label>
+                        <select name="type" class="form-select border-0 bg-light" required>
+                            <option value="Task">Task</option>
+                            <option value="Reminder">Reminder</option>
+                            <option value="Note">Quick Note</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-muted">Title</label>
+                        <input type="text" name="title" class="form-control border-0 bg-light" required placeholder="e.g. Call supplier">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-muted">Description (Optional)</label>
+                        <textarea name="description" class="form-control border-0 bg-light" rows="3" placeholder="Additional details..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light rounded-pill" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary-custom rounded-pill px-4">Save Entry</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

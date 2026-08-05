@@ -32,6 +32,8 @@ class Business(db.Model):
     founded_year = db.Column(db.String(10))
     headquarters = db.Column(db.String(150))
     description = db.Column(db.Text)
+    niche = db.Column(db.String(100))
+    contact_email = db.Column(db.String(120))
     join_code = db.Column(db.String(20), unique=True, nullable=False)
     owner_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -89,6 +91,16 @@ class TaskLocationLog(db.Model):
     longitude = db.Column(db.Float, nullable=False)
     address = db.Column(db.String(255))
     logged_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class TodoNote(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(150), nullable=False)
+    description = db.Column(db.Text)
+    status = db.Column(db.String(30), default='Pending') # Pending, In Progress, Completed
+    type = db.Column(db.String(30), default='Task') # Task, Reminder, Note
+    business_id = db.Column(db.Integer, db.ForeignKey('business.id'), nullable=False)
+    owner_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class NewsArticle(db.Model):
     id = db.Column(db.Integer, primary_key=True)

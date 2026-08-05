@@ -37,14 +37,14 @@
 | Member | Feature | Description |
 |--------|---------|-------------|
 | **Salman Farsi** | Competitor Management | Add, edit, delete, and view competitor profiles grouped by industry. |
-| **Rifaat Nuha** | Business/Workspace Configuration | Configure workspace settings, company profile, and business details. |
+| **Rifaat Nuha** | Business/Workspace Configuration ✅ | Manages workspace setup, business niche, and team configurations. |
 | **Mumtahenah** | Product & Price Catalog Management | Add competitor products and listed prices (via manual entry or URL import). |
 
 ### Module 2
 | Member | Feature | Description |
 |--------|---------|-------------|
 | **Salman Farsi** | Field Research Task Assignment | Assign store research tasks to enrolled field agents with status tracking. |
-| **Rifaat Nuha** | Competitor & Industry News Monitoring | Fetch, search, and monitor competitor and industry news via NewsAPI. |
+| **Rifaat Nuha** | Competitor & Industry News Monitoring ✅ | Caches and displays domain-specific and competitor news using NewsAPI with manual refresh controls. |
 | **Mumtahenah** | Live Field Agent Location Tracking | Browser GPS permission ➔ store coordinates ➔ interactive Assigner portal map view. |
 
 ### Module 3
@@ -52,8 +52,8 @@
 |--------|---------|-------------|
 | **Salman Farsi** | AI Companion Ask-Anything Chat | High-speed conversational AI chat assistant powered by Meta Llama 3.1 8B on NVIDIA NIM API. |
 | **Salman Farsi** | Meeting Management & Business Expense Management | Single-page hub to create, edit, delete, end meetings & log expenses/revenue with net profit math. |
-| **Rifaat Nuha** | To-Do & Quick Notes | Create, edit, delete, and view tasks, reminders, or quick notes. |
-| **Rifaat Nuha** | Strategic Recommendation Report | Generate business SWOT & PESTEL analysis and marketing strategy recommendations via Gemini API. |
+| **Rifaat Nuha** | To-Do & Quick Notes ✅ | Provides a 3-column Kanban-style board to track and manage tasks, reminders, and notes. |
+| **Rifaat Nuha** | Strategic Recommendation Report ❌ | (Feature removed from codebase per request). |
 | **Mumtahenah** | Competitor Discovery & Search Visibility Tracker | Track search visibility and discover competitors using Google Custom Search API. |
 | **Mumtahenah** | Agents On-Site Findings Submission & Email Alert | Submit field audit findings and trigger automated email notifications via Resend API. |
 
