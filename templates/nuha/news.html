@@ -1,0 +1,115 @@
+{% extends 'layout.html' %}
+
+{% block title %}News Monitor — MarketMind{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1">News Monitor (Cached)</h2>
+        <p class="text-muted small mb-0">
+            View cached news for <strong>{{ business.industry }}{% if business.niche %} — {{ business.niche }}{% endif %}</strong> 
+            and your competitors. Fetch manually to save API limits.
+        </p>
+    </div>
+</div>
+
+<!-- Bootstrap Tabs -->
+<ul class="nav nav-tabs mb-4 border-0" id="newsTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link {% if active_tab == 'industry' %}active{% endif %} fw-bold px-4 py-2 bg-white text-dark rounded-top-3 border shadow-sm me-2" id="industry-tab" data-bs-toggle="tab" data-bs-target="#industry" type="button" role="tab" aria-controls="industry" aria-selected="{% if active_tab == 'industry' %}true{% else %}false{% endif %}">
+            <i class="bi bi-graph-up-arrow text-primary me-2"></i>Industry News
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link {% if active_tab == 'competitor' %}active{% endif %} fw-bold px-4 py-2 bg-white text-dark rounded-top-3 border shadow-sm" id="competitor-tab" data-bs-toggle="tab" data-bs-target="#competitor" type="button" role="tab" aria-controls="competitor" aria-selected="{% if active_tab == 'competitor' %}true{% else %}false{% endif %}">
+            <i class="bi bi-buildings text-danger me-2"></i>Competitor News
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content" id="newsTabsContent">
+    
+    <!-- ============================================== -->
+    <!-- TAB 1: INDUSTRY NEWS -->
+    <!-- ============================================== -->
+    <div class="tab-pane fade {% if active_tab == 'industry' %}show active{% endif %}" id="industry" role="tabpanel" aria-labelledby="industry-tab">
+        <div class="card card-custom p-4 bg-white shadow-sm border-0 mb-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+            <div>
+                <h5 class="fw-bold mb-1">Your Industry & Niche</h5>
+                <p class="text-muted small mb-0">We use your workspace config to find relevant domain news.</p>
+            </div>
+            
+            <form action="{{ url_for('nuha_news.fetch') }}" method="POST">
+                <input type="hidden" name="category" value="industry">
+                <button type="submit" class="btn btn-primary-custom px-4 shadow-sm rounded-pill d-flex align-items-center gap-2">
+                    <i class="bi bi-cloud-download"></i> Fetch Latest Industry News
+                </button>
+            </form>
+        </div>
+
+        <div class="row g-3">
+            {% if industry_articles %}
+                {% for article in industry_articles %}
+                <div class="col-md-6 col-lg-3">
+                    {% include 'nuha/_news_card.html' %}
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="col-12">
+                    <div class="card card-custom p-5 text-center text-muted border-0 bg-white shadow-sm">
+                        <i class="bi bi-inbox fs-1 opacity-50 mb-2 d-block"></i>
+                        <h5>No industry news cached.</h5>
+                        <p class="small mb-0">Click the fetch button above to retrieve the latest news.</p>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- ============================================== -->
+    <!-- TAB 2: COMPETITOR NEWS -->
+    <!-- ============================================== -->
+    <div class="tab-pane fade {% if active_tab == 'competitor' %}show active{% endif %}" id="competitor" role="tabpanel" aria-labelledby="competitor-tab">
+        <div class="card card-custom p-4 bg-white shadow-sm border-0 mb-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+            <div>
+                <h5 class="fw-bold mb-1">Track Competitors</h5>
+                <p class="text-muted small mb-0">Select a competitor to fetch their latest news coverage.</p>
+            </div>
+            
+            <form action="{{ url_for('nuha_news.fetch') }}" method="POST" class="d-flex gap-2">
+                <input type="hidden" name="category" value="competitor">
+                <select name="competitor_id" class="form-select border shadow-sm rounded-pill px-4" required>
+                    <option value="" disabled selected>-- Select a Competitor --</option>
+                    {% for comp in competitors %}
+                        <option value="{{ comp.id }}">{{ comp.name }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="btn btn-danger px-4 shadow-sm rounded-pill d-flex align-items-center gap-2 text-nowrap">
+                    <i class="bi bi-cloud-download"></i> Fetch News
+                </button>
+            </form>
+        </div>
+
+        <div class="row g-3">
+            {% if competitor_articles %}
+                <!-- Group competitor articles logically if there are many -->
+                {% for article in competitor_articles %}
+                <div class="col-md-6 col-lg-3">
+                    {% include 'nuha/_news_card.html' %}
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="col-12">
+                    <div class="card card-custom p-5 text-center text-muted border-0 bg-white shadow-sm">
+                        <i class="bi bi-inbox fs-1 opacity-50 mb-2 d-block"></i>
+                        <h5>No competitor news cached.</h5>
+                        <p class="small mb-0">Select a competitor and fetch news to see results here.</p>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% endblock %}

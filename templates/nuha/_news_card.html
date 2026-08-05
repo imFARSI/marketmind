@@ -1,0 +1,51 @@
+<!-- 
+    Reusable News Article Card Partial
+    Used by: templates/nuha/news.html
+    Variable expected: article (dict from NewsAPI response)
+-->
+<div class="card card-custom bg-white shadow-sm border-0 h-100 d-flex flex-column" style="border-radius: 12px; overflow: hidden;">
+    <!-- Article Image -->
+    {% if article.urlToImage %}
+    <img src="{{ article.urlToImage }}"
+         alt="{{ article.title }}"
+         class="card-img-top"
+         style="height: 160px; object-fit: cover;"
+         onerror="this.style.display='none'">
+    {% endif %}
+
+    <div class="card-body d-flex flex-column p-3">
+        <!-- Source & Date -->
+        <div class="d-flex align-items-center justify-content-between mb-2">
+            <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-2 py-1 fw-semibold small">
+                {{ article.source.name if article.source else 'Unknown' }}
+            </span>
+            <span class="text-muted" style="font-size: 0.75rem;">
+                {% if article.publishedAt %}
+                    {{ article.publishedAt[:10] }}
+                {% endif %}
+            </span>
+        </div>
+
+        <!-- Headline -->
+        <h6 class="fw-bold text-dark mb-2 lh-sm" style="font-size: 0.9rem;">
+            {{ article.title | truncate(90) if article.title else 'No title' }}
+        </h6>
+
+        <!-- Description -->
+        {% if article.description %}
+        <p class="text-muted small mb-3 flex-grow-1" style="font-size: 0.8rem; line-height: 1.45;">
+            {{ article.description | truncate(110) }}
+        </p>
+        {% else %}
+        <div class="flex-grow-1"></div>
+        {% endif %}
+
+        <!-- Read More Link -->
+        {% if article.url %}
+        <a href="{{ article.url }}" target="_blank" rel="noopener noreferrer"
+           class="btn btn-outline-primary btn-sm rounded-pill px-3 mt-auto align-self-start">
+            Read More <i class="bi bi-box-arrow-up-right ms-1" style="font-size: 0.7rem;"></i>
+        </a>
+        {% endif %}
+    </div>
+</div>
