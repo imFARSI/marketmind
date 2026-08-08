@@ -3,8 +3,194 @@
 {% block title %}Product Catalog — MarketMind{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center pb-2 mb-3 border-bottom">
-    <h1 class="h2">Product & Price Catalog (Mumtahenah)</h1>
+<div class="container-fluid py-3">
+
+    <!-- PAGE HEADER -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="fw-bold mb-0 text-dark"><i class="bi bi-box-seam text-primary me-2"></i>Product Catalog</h3>
+        <div>
+            <button class="btn btn-outline-primary btn-sm rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#importUrlModal">Import via Link</button>
+            <button class="btn btn-primary btn-sm rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#addManualModal">+ Add Product</button>
+        </div>
+    </div>
+
+    <!-- SUMMARY KPI STATS -->
+    <div class="row g-2 mb-3">
+        <div class="col-6 col-md-3">
+            <div class="card p-2 text-center border-0 shadow-sm">
+                <small class="text-muted text-uppercase">Total</small>
+                <h4 class="fw-bold text-primary mb-0">{{ kpis.total }}</h4>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card p-2 text-center border-0 shadow-sm">
+                <small class="text-muted text-uppercase">Avg Price</small>
+                <h4 class="fw-bold text-success mb-0">${{ "%.2f"|format(kpis.avg) }}</h4>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card p-2 text-center border-0 shadow-sm">
+                <small class="text-muted text-uppercase">Max Price</small>
+                <h4 class="fw-bold text-warning mb-0">${{ "%.2f"|format(kpis.highest) }}</h4>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card p-2 text-center border-0 shadow-sm">
+                <small class="text-muted text-uppercase">Competitors</small>
+                <h4 class="fw-bold text-info mb-0">{{ kpis.competitors_count }}</h4>
+            </div>
+        </div>
+    </div>
+
+    <!-- FILTER FORM -->
+    <form method="GET" action="{{ url_for('mumtahenah_products.index') }}" class="row g-2 mb-3">
+        <div class="col-md-5"><input type="text" name="search" class="form-control form-control-sm" placeholder="Search product..." value="{{ search_query }}"></div>
+        <div class="col-md-5">
+            <select name="competitor_id" class="form-select form-select-sm" onchange="this.form.submit()">
+                <option value="">-- All Competitors --</option>
+                {% for comp in competitors %}<option value="{{ comp.id }}" {% if selected_competitor_id == comp.id %}selected{% endif %}>{{ comp.name }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2"><button type="submit" class="btn btn-sm btn-primary w-100">Filter</button></div>
+    </form>
+
+    <!-- PRODUCT TABLE -->
+    <div class="card border-0 shadow-sm rounded-3">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="bg-light small text-uppercase">
+                <tr><th>Product</th><th>Competitor</th><th>Listed Price</th><th>Source</th><th class="text-end">Actions</th></tr>
+            </thead>
+            <tbody>
+                {% if products %}
+                    {% for item in products %}
+                    <tr>
+                        <td><strong>{{ item.product.name }}</strong> <span class="badge bg-secondary extra-small ms-1">{{ item.product.category }}</span></td>
+                        <td><span class="badge bg-primary">{{ item.competitor_name }}</span></td>
+                        <td>
+                            <strong>{{ item.currency }} {{ "%.2f"|format(item.latest_price) }}</strong>
+                            {% if item.history_count > 0 %}
+                            <span class="badge bg-info text-dark extra-small ms-1" onclick="showPriceHistory({{ item.product.id }})" style="cursor:pointer;">{{ item.history_count }} Changes</span>
+                            {% endif %}
+                        </td>
+                        <td><span class="badge {% if item.source == 'URL Link Import' %}bg-success{% else %}bg-light text-dark border{% endif %}">{{ item.source }}</span></td>
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-outline-success" onclick="openUpdatePriceModal({{ item.product.id }}, '{{ item.product.name|e }}', '{{ item.latest_price }}', '{{ item.currency }}')">Update Price</button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="openDeleteModal({{ item.product.id }}, '{{ item.product.name|e }}')">Delete</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr><td colspan="5" class="text-center py-3 text-muted">No products found. Add a product manually or via link.</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
 </div>
-<p class="text-muted">Mumtahenah's product catalog starter template.</p>
+
+<!-- MODAL 1: ADD MANUAL PRODUCT -->
+<div class="modal fade" id="addManualModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="POST" action="{{ url_for('mumtahenah_products.add_manual') }}" class="modal-content">
+            <div class="modal-header bg-primary text-white"><h5 class="modal-title">Add Competitor Product</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <div class="mb-2"><label>Competitor *</label><select name="competitor_id" class="form-select" required><option value="">-- Choose --</option>{% for comp in competitors %}<option value="{{ comp.id }}">{{ comp.name }}</option>{% endfor %}</select></div>
+                <div class="mb-2"><label>Product Name *</label><input type="text" name="name" class="form-control" required></div>
+                <div class="row g-2 mb-2">
+                    <div class="col-8"><label>Category</label><input type="text" name="category" class="form-control"></div>
+                    <div class="col-4"><label>Currency</label><select name="currency" class="form-select"><option value="USD">USD ($)</option><option value="BDT">BDT (৳)</option></select></div>
+                </div>
+                <div class="mb-2"><label>Price *</label><input type="number" step="0.01" min="0" name="amount" class="form-control" required></div>
+                <div class="mb-2"><label>Description</label><textarea name="description" class="form-control" rows="2"></textarea></div>
+            </div>
+            <div class="modal-footer"><button type="submit" class="btn btn-primary w-100">Save Product</button></div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL 2: IMPORT VIA LINK -->
+<div class="modal fade" id="importUrlModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="POST" action="{{ url_for('mumtahenah_products.add_url') }}" class="modal-content">
+            <div class="modal-header bg-success text-white"><h5 class="modal-title">Import Product via Link</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <div class="mb-2"><label>Competitor *</label><select name="competitor_id" class="form-select" required><option value="">-- Choose --</option>{% for comp in competitors %}<option value="{{ comp.id }}">{{ comp.name }}</option>{% endfor %}</select></div>
+                <div class="mb-2"><label>Product Webpage URL *</label><input type="url" name="url" class="form-control" required placeholder="https://competitor.com/product-link"></div>
+                <div class="mb-2"><label>Product Name (Optional Override)</label><input type="text" name="name" class="form-control"></div>
+                <div class="row g-2 mb-2">
+                    <div class="col-8"><label>Category</label><input type="text" name="category" class="form-control"></div>
+                    <div class="col-4"><label>Currency</label><select name="currency" class="form-select"><option value="USD">USD ($)</option><option value="BDT">BDT (৳)</option></select></div>
+                </div>
+                <div class="mb-2"><label>Price</label><input type="number" step="0.01" min="0" name="amount" class="form-control"></div>
+            </div>
+            <div class="modal-footer"><button type="submit" class="btn btn-success w-100">Import Product</button></div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL 3: UPDATE PRICE -->
+<div class="modal fade" id="updatePriceModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="POST" id="updatePriceForm" action="" class="modal-content">
+            <div class="modal-header bg-warning"><h5 class="modal-title">Update Listed Price</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <h6 id="updatePriceProductName">Product Title</h6>
+                <div class="mb-2"><label>New Price *</label><input type="number" step="0.01" min="0" name="amount" class="form-control" required></div>
+                <div class="mb-2"><label>Reason</label><select name="source" class="form-select"><option value="Manual Field Audit">Manual Field Audit</option><option value="Website Check">Website Check</option></select></div>
+            </div>
+            <div class="modal-footer"><button type="submit" class="btn btn-warning w-100">Save Price</button></div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL 4: PRICE HISTORY -->
+<div class="modal fade" id="priceHistoryModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white"><h5 class="modal-title">Price History Logs</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body" id="historyListContainer"><div class="text-center py-3"><div class="spinner-border text-primary"></div></div></div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL 5: DELETE PRODUCT -->
+<div class="modal fade" id="deleteProductModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="POST" id="deleteProductForm" action="" class="modal-content">
+            <div class="modal-header bg-danger text-white"><h5 class="modal-title">Delete Product</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body text-center py-3">Delete product <strong id="deleteProductName"></strong>?</div>
+            <div class="modal-footer justify-content-center"><button type="submit" class="btn btn-danger">Delete Permanently</button></div>
+        </form>
+    </div>
+</div>
+
+<!-- JAVASCRIPT FOR POPUPS -->
+<script>
+function openUpdatePriceModal(id, name, price, cur) {
+    document.getElementById('updatePriceProductName').innerText = name;
+    document.getElementById('updatePriceForm').action = "/mumtahenah/products/update-price/" + id;
+    new bootstrap.Modal(document.getElementById('updatePriceModal')).show();
+}
+function openDeleteModal(id, name) {
+    document.getElementById('deleteProductName').innerText = name;
+    document.getElementById('deleteProductForm').action = "/mumtahenah/products/delete/" + id;
+    new bootstrap.Modal(document.getElementById('deleteProductModal')).show();
+}
+function showPriceHistory(id) {
+    const modal = new bootstrap.Modal(document.getElementById('priceHistoryModal'));
+    const container = document.getElementById('historyListContainer');
+    container.innerHTML = '<div class="text-center py-2"><div class="spinner-border text-primary"></div></div>';
+    modal.show();
+    fetch('/mumtahenah/products/api/price-history/' + id)
+        .then(res => res.json())
+        .then(data => {
+            let html = '<ul class="list-group">';
+            if (data.history && data.history.length > 0) {
+                data.history.forEach(log => {
+                    html += `<li class="list-group-item d-flex justify-content-between"><strong>$${log.old} ➔ $${log.new}</strong><small class="text-muted">${log.date}</small></li>`;
+                });
+            } else { html += '<li class="list-group-item text-center text-muted">No price changes recorded.</li>'; }
+            container.innerHTML = html + '</ul>';
+        });
+}
+</script>
 {% endblock %}
