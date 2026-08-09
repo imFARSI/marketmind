@@ -33,10 +33,12 @@ def parse_product_url(url):
             price_tag = soup.find('meta', property='og:price:amount') or soup.find('meta', name='price')
             if price_tag and price_tag.get('content'):
                 data['price'] = float(price_tag.get('content').replace(',', ''))
-            elif match := re.search(r'(\$|USD|BDT|৳)\s?([0-9]+(?:\.[0-9]{2})?)', soup.get_text()):
-                if match.group(1) in ['BDT', '৳']:
-                    data['currency'] = 'BDT'
-                data['price'] = float(match.group(2))
+            else:
+                match = re.search(r'(\$|USD|BDT|৳)\s?([0-9]+(?:\.[0-9]{2})?)', soup.get_text())
+                if match:
+                    if match.group(1) in ['BDT', '৳']:
+                        data['currency'] = 'BDT'
+                    data['price'] = float(match.group(2))
     except Exception:
         pass
 

@@ -43,7 +43,7 @@ def index():
         selected_industry=selected_industry,
         industries=industries_list
     )
-
+    #ADDING COMPETITORS
 @competitors_bp.route('/add', methods=['POST'])
 @login_required
 def add_competitor():
