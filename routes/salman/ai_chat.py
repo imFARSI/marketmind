@@ -1,4 +1,4 @@
-# AI Companion Chat
+# AI Companion Chat (Role Restricted to Business Owner / Business User)
 
 import os
 import requests
@@ -96,6 +96,10 @@ def query_nvidia_llama(prompt, conversation_history=None):
 @ai_chat_bp.route('/')
 @login_required
 def index():
+    if current_user.role == 'Field Agent':
+        flash('Access denied. Field agents do not have access to AI Companion.', 'danger')
+        return redirect(url_for('salman_field_tasks.my_tasks'))
+
     business = get_user_business()
     messages = CompanionMessage.query.filter_by(business_id=business.id).order_by(CompanionMessage.created_at.asc()).all()
     return render_template('salman/ai_chat.html', messages=messages)
@@ -103,6 +107,9 @@ def index():
 @ai_chat_bp.route('/history')
 @login_required
 def get_history():
+    if current_user.role == 'Field Agent':
+        return jsonify({'error': 'Access denied. Field Agents cannot access AI Companion.'}), 403
+
     business = get_user_business()
     messages = CompanionMessage.query.filter_by(business_id=business.id).order_by(CompanionMessage.created_at.asc()).all()
     data = []
@@ -115,10 +122,15 @@ def get_history():
     return jsonify({'messages': data})
 
 @ai_chat_bp.route('/send', methods=['POST'])
+@ai_chat_bp.route('/message', methods=['POST'])
 @login_required
 def send_message():
+    if current_user.role == 'Field Agent':
+        return jsonify({'error': 'Access denied. Field Agents cannot access AI Companion.'}), 403
+
     business = get_user_business()
-    user_prompt = request.form.get('prompt', '').strip()
+    payload = request.get_json(silent=True) or request.form
+    user_prompt = payload.get('prompt', '').strip()
 
     if not user_prompt:
         return jsonify({'error': 'Empty prompt'}), 400
@@ -144,6 +156,7 @@ def send_message():
     db.session.commit()
 
     return jsonify({
+        'status': 'success',
         'user_prompt': user_prompt,
         'ai_response': ai_response_text,
         'timestamp': ai_msg.created_at.strftime('%H:%M')
@@ -152,6 +165,10 @@ def send_message():
 @ai_chat_bp.route('/clear', methods=['POST'])
 @login_required
 def clear_history():
+    if current_user.role == 'Field Agent':
+        flash('Access denied.', 'danger')
+        return redirect(url_for('salman_field_tasks.my_tasks'))
+
     business = get_user_business()
     CompanionMessage.query.filter_by(business_id=business.id).delete()
     db.session.commit()

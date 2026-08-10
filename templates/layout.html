@@ -328,11 +328,7 @@
     <div class="app-main">
         <!-- Top Bar -->
         <header class="app-topbar">
-            <div class="topbar-search">
-                <i class="bi bi-search"></i>
-                <input type="text" placeholder="Search competitors or products...">
-            </div>
-            <div class="topbar-right">
+            <div class="topbar-right ms-auto">
                 <button class="topbar-icon-btn"><i class="bi bi-bell"></i></button>
                 <div class="topbar-brand-title">MarketMind</div>
                 <a href="{{ url_for('auth.profile') }}" class="d-flex align-items-center gap-2 ms-2 text-decoration-none" title="View User Profile">
@@ -404,6 +400,7 @@
         </div>
     </div>
 
+    {% if current_user.role != 'Field Agent' %}
     <!-- Floating AI Companion Chat Widget (Bottom Right) -->
     <div id="aiFloatingWidgetContainer" style="position: fixed; bottom: 25px; right: 25px; z-index: 1050;">
         <!-- Trigger Button -->
@@ -418,8 +415,8 @@
                 <div class="d-flex align-items-center gap-2">
                     <div class="bg-primary bg-opacity-20 rounded p-1.5"><i class="bi bi-robot text-info"></i></div>
                     <div>
-                        <h6 class="fw-bold mb-0 text-white" style="font-size: 0.95rem;">MindAI</h6>
-                        <small class="text-light text-opacity-75 fs-7">AI Assistant</small>
+                        <div class="fw-bold text-white small">MindAI Companion</div>
+                        <small class="text-light text-opacity-75 fs-7 d-block">Powered by Llama 3.1 8B</small>
                     </div>
                 </div>
                 <div class="d-flex align-items-center gap-1">
@@ -435,8 +432,8 @@
                     <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex p-3 mb-2">
                         <i class="bi bi-robot fs-3"></i>
                     </div>
-                    <h6 class="fw-bold text-dark mb-1" style="font-size: 0.9rem;">How can I assist you?</h6>
-                    <small class="text-muted d-block fs-7">Ask me anything general or request market tips.</small>
+                    <h6 class="fw-bold mb-1">MindAI Executive Assistant</h6>
+                    <p class="text-muted small px-3">Ask anything about strategy, competitors, financial analysis, or market research.</p>
                 </div>
             </div>
 
@@ -451,6 +448,7 @@
             </div>
         </div>
     </div>
+    {% endif %}
 
     {% else %}
 
