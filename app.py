@@ -46,4 +46,5 @@ app.register_blueprint(products_bp)
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-    app.run(debug=True, port=5000)
+    # Port 1518 corresponds to the last 4 digits of Student ID: 23101518
+    app.run(debug=True, port=1518)
