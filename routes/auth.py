@@ -52,6 +52,10 @@ def register():
             flash('Please enter a valid email address (e.g. name@company.com).', 'danger')
             return redirect(url_for('auth.register'))
 
+        if User.query.filter_by(username=username).first():
+            flash('Username is already taken. Please choose a different username.', 'warning')
+            return redirect(url_for('auth.register'))
+
         if User.query.filter_by(email=email).first():
             flash('Email address is already registered.', 'warning')
             return redirect(url_for('auth.register'))
