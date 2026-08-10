@@ -5,7 +5,7 @@
 import os
 import requests
 from datetime import datetime
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 
 from models import db, NewsArticle, Competitor
@@ -160,3 +160,107 @@ def fetch():
         category = 'industry' # fallback
 
     return redirect(url_for('nuha_news.index', tab=category))
+
+# ==============================================================================
+# RESTful JSON APIs
+# ==============================================================================
+
+@news_bp.route('/api/articles', methods=['GET'])
+@login_required
+def api_articles():
+    """REST API: Returns JSON array of cached news articles for the user's business workspace."""
+    if current_user.role not in ['Business Owner', 'Business User']:
+        return jsonify({'status': 'error', 'message': 'Access denied.'}), 403
+
+    business = current_user.user_business
+    if not business:
+        return jsonify({'status': 'error', 'message': 'No business workspace found.'}), 404
+
+    industry_articles = NewsArticle.query.filter_by(business_id=business.id, competitor_id=None).order_by(NewsArticle.published_at.desc()).all()
+    competitor_articles = NewsArticle.query.filter(NewsArticle.business_id == business.id, NewsArticle.competitor_id != None).order_by(NewsArticle.published_at.desc()).all()
+
+    industry_data = [{
+        'id': a.id,
+        'title': a.title,
+        'source': a.source,
+        'url': a.url,
+        'summary': a.summary,
+        'published_at': a.published_at.isoformat() if a.published_at else None,
+        'competitor_id': a.competitor_id
+    } for a in industry_articles]
+
+    competitor_data = [{
+        'id': a.id,
+        'title': a.title,
+        'source': a.source,
+        'url': a.url,
+        'summary': a.summary,
+        'published_at': a.published_at.isoformat() if a.published_at else None,
+        'competitor_id': a.competitor_id
+    } for a in competitor_articles]
+
+    all_articles = industry_data + competitor_data
+
+    return jsonify({
+        'status': 'success',
+        'count': len(all_articles),
+        'industry_articles': industry_data,
+        'competitor_articles': competitor_data,
+        'articles': all_articles
+    })
+
+@news_bp.route('/api/fetch', methods=['POST'])
+@login_required
+def api_fetch():
+    """REST API: Accepts JSON payload or Form data to fetch latest news via NewsAPI and update cache."""
+    if current_user.role not in ['Business Owner', 'Business User']:
+        return jsonify({'status': 'error', 'message': 'Access denied.'}), 403
+
+    business = current_user.user_business
+    if not business:
+        return jsonify({'status': 'error', 'message': 'No business workspace found.'}), 404
+
+    payload = request.get_json(silent=True) or request.form
+    category = payload.get('category')
+
+    if category == 'industry':
+        industry = business.industry or ''
+        niche = business.niche or ''
+        query = f"{niche} {industry}".strip()
+        if not query:
+            query = "business"
+
+        success, msg = fetch_and_save_news(query, business.id, competitor_id=None)
+        if success:
+            count = NewsArticle.query.filter_by(business_id=business.id, competitor_id=None).count()
+            return jsonify({
+                'status': 'success',
+                'message': msg,
+                'articles_count': count
+            })
+        else:
+            return jsonify({'status': 'error', 'message': msg}), 400
+
+    elif category == 'competitor':
+        competitor_id = payload.get('competitor_id')
+        if not competitor_id:
+            return jsonify({'status': 'error', 'message': 'Please select a competitor to fetch news for.'}), 400
+
+        competitor = Competitor.query.filter_by(id=competitor_id, business_id=business.id).first()
+        if not competitor:
+            return jsonify({'status': 'error', 'message': 'Competitor not found.'}), 404
+
+        query = competitor.name
+        success, msg = fetch_and_save_news(query, business.id, competitor_id=competitor.id)
+        if success:
+            count = NewsArticle.query.filter_by(business_id=business.id, competitor_id=competitor.id).count()
+            return jsonify({
+                'status': 'success',
+                'message': msg,
+                'articles_count': count
+            })
+        else:
+            return jsonify({'status': 'error', 'message': msg}), 400
+    else:
+        return jsonify({'status': 'error', 'message': 'Invalid category selected. Use "industry" or "competitor".'}), 400
+
