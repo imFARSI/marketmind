@@ -43,14 +43,14 @@
 ### Module 2
 | Member | Feature | Description |
 |--------|---------|-------------|
-| **Salman Farsi** | Field Research Task Assignment | Assign store research tasks to enrolled field agents with status tracking. |
+| **Salman Farsi** | AI Companion Ask-Anything Chat | High-speed conversational AI chat assistant powered by Llama 3.1 8B API (NVIDIA NIM). |
 | **Rifaat Nuha** | Competitor & Industry News Monitoring | Monitor competitor news and own business industry news via NewsAPI with caching and refresh controls. |
 | **Mumtahenah** | Live Field Agent Location Tracking | Agent clicks "Accept & Share Location" ➔ browser GPS permission ➔ store coordinates ➔ Assigner portal map display. |
 
 ### Module 3
 | Member | Feature | Description |
 |--------|---------|-------------|
-| **Salman Farsi** | AI Companion Ask-Anything Chat | High-speed conversational AI chat assistant powered by Llama 3.1 8B API (NVIDIA NIM). |
+| **Salman Farsi** | Field Research Task Assignment | Assign store research tasks to enrolled field agents with status tracking. |
 | **Salman Farsi** | Meeting Management & Business Expense Management | Single-page hub to create, edit, delete, and manage business meetings and calculate business expenses. |
 | **Rifaat Nuha** | To-Do & Quick Notes | Users can create, edit, delete, and view tasks, reminders, or quick notes to complete later. |
 | **Rifaat Nuha** | Strategic Recommendation Report | Generate own business SWOT & PESTEL by reasoning business model vs competitors + marketing strategy and next move (Gemini API). |
