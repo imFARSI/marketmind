@@ -22,6 +22,8 @@ def get_user_business():
         db.session.commit()
     return business
 
+
+
 def perform_web_search(query):
     """Simple web search tool using DuckDuckGo HTML API for 2026 real-time web facts."""
     try:
@@ -38,9 +40,10 @@ def perform_web_search(query):
     except Exception:
         pass
     return ""
-
+# QUERY ENGINE preparing the thing
 def query_nvidia_llama(prompt, conversation_history=None):
     """Queries NVIDIA NIM API hosting Meta Llama 3.1 8B Instruct model for ultra-fast response times."""
+    
     api_key = os.getenv('NVIDIA_API_KEY') or DEFAULT_NVIDIA_KEY
     if not api_key:
         return "NVIDIA API key not configured in .env file."
@@ -76,8 +79,8 @@ def query_nvidia_llama(prompt, conversation_history=None):
     payload = {
         "model": "meta/llama-3.1-8b-instruct",
         "messages": messages,
-        "temperature": 0.6,
-        "top_p": 0.9,
+        "temperature": 0.6, #0.6 sets sampling randomness 
+        "top_p": 0.9, #sets nucleus sampling probability cutoff
         "max_tokens": 512
     }
 
@@ -90,7 +93,7 @@ def query_nvidia_llama(prompt, conversation_history=None):
             return "Ask me again, I'm having a network issue."
     except Exception:
         return "Ask me again, I'm having a network issue."
-
+#STANDALONE FULL-PAGE VIEW HANDLER 
 @ai_chat_bp.route('/')
 @login_required
 def index():
@@ -101,7 +104,7 @@ def index():
     business = get_user_business()
     messages = CompanionMessage.query.filter_by(business_id=business.id).order_by(CompanionMessage.created_at.asc()).all()
     return render_template('salman/ai_chat.html', messages=messages)
-
+#Defines REST API endpoint for fetching chat history and sending the message
 @ai_chat_bp.route('/history')
 @login_required
 def get_history():
