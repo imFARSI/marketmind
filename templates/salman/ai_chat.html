@@ -151,11 +151,14 @@
         const formData = new FormData();
         formData.append('prompt', userText);
 
+        // REST API: Send prompt via HTTP POST
         fetch("{{ url_for('salman_ai_chat.send_message') }}", {
             method: 'POST',
             body: formData
         })
+        // REST API: Parse JSON response
         .then(res => res.json())
+        // REST API: Accept data.ai_response and render to DOM
         .then(data => {
             document.getElementById(loadingId).remove();
             if (data.ai_response) {
