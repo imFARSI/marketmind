@@ -13,8 +13,6 @@ NVIDIA_API_KEY = os.getenv('NVIDIA_API_KEY', DEFAULT_NVIDIA_KEY)
 NVIDIA_NIM_URL = "https://integrate.api.nvidia.com/v1/chat/completions"
 
 def get_user_business():
-    if current_user.role == 'Field Agent' and current_user.business_id:
-        return Business.query.get(current_user.business_id)
     business = Business.query.filter_by(owner_id=current_user.id).first()
     if not business:
         import secrets
