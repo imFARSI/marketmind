@@ -28,7 +28,9 @@ def login():
         if not user:
             flash('No account found with this email address.', 'danger')
             return redirect(url_for('auth.login'))
-        elif user.password != password:
+        from werkzeug.security import check_password_hash
+        is_valid_password = check_password_hash(user.password, password) if user.password.startswith('pbkdf2:') else (user.password == password)
+        if not is_valid_password:
             flash('Incorrect password. Please try again.', 'danger')
             return redirect(url_for('auth.login'))
         else:
