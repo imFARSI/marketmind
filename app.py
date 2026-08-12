@@ -13,6 +13,7 @@ from routes.nuha.workspace import workspace_bp
 from routes.nuha.news import news_bp
 from routes.nuha.todo import todo_bp
 from routes.mumtahenah.products import products_bp
+from routes.mumtahenah.livelocationtrack import tracking_bp
 
 load_dotenv()
 
@@ -42,6 +43,7 @@ app.register_blueprint(workspace_bp)
 app.register_blueprint(news_bp)
 app.register_blueprint(todo_bp)
 app.register_blueprint(products_bp)
+app.register_blueprint(tracking_bp)
 
 if __name__ == '__main__':
     with app.app_context():

@@ -305,6 +305,9 @@
                 <a href="{{ url_for('mumtahenah_products.index') }}" class="nav-link {% if 'mumtahenah_products' in request.endpoint %}active{% endif %}">
                     <i class="bi bi-box-seam"></i> Product Catalog
                 </a>
+                <a href="{{ url_for('mumtahenah_tracking.index') }}" class="nav-link {% if 'mumtahenah_tracking' in request.endpoint %}active{% endif %}">
+                    <i class="bi bi-geo-alt"></i> Live Agent Tracking
+                </a>
                 {% endif %}
             </nav>
         </div>
