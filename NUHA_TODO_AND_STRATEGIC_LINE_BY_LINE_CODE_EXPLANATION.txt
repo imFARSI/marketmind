@@ -1,0 +1,387 @@
+================================================================================
+MARKETMIND PLATFORM — NUHA FEATURES LINE-BY-LINE CODE EXPLANATION
+Feature 03: To-Do & Quick Notes Management (/nuha/todo)
+Feature 04: Strategic Recommendation Report (/nuha/strategic)
+================================================================================
+
+TABLE OF CONTENTS
+--------------------------------------------------------------------------------
+1. FEATURE 03: TO-DO & QUICK NOTES
+   1.1 Backend Code Explanation (routes/nuha/todo.py)
+   1.2 Frontend Code Explanation (templates/nuha/todo.html & _todo_card.html)
+
+2. FEATURE 04: STRATEGIC RECOMMENDATION REPORT
+   2.1 Backend Code Explanation (routes/nuha/strategic.py)
+   2.2 Frontend Code Explanation (templates/nuha/strategic.html)
+
+3. API CALLS & DATA FLOW SUMMARY
+   3.1 External AI API Integrations (Gemini & NVIDIA Meta Llama 3.1)
+   3.2 Internal REST JSON APIs & Web Form Actions
+================================================================================
+
+
+================================================================================
+1. FEATURE 03: TO-DO & QUICK NOTES MANAGEMENT
+================================================================================
+
+--------------------------------------------------------------------------------
+1.1 BACKEND CODE EXPLANATION (routes/nuha/todo.py)
+--------------------------------------------------------------------------------
+
+[Lines 1-9: Module Header & Imports]
+Line 1-3: Header comments identifying Nuha's Feature 3 module.
+Line 5: Imports essential Flask components:
+        - `Blueprint`: Creates a modular component for routing.
+        - `render_template`: Renders HTML pages with Python variables.
+        - `request`: Accesses incoming form submissions and JSON payloads.
+        - `redirect`, `url_for`: Redirects the user to another page/route.
+        - `flash`: Displays temporary alert messages on the web UI.
+        - `jsonify`: Formats Python dictionaries into JSON responses for REST APIs.
+Line 6: Imports `login_required` (secures endpoints) and `current_user` (logged-in user session) from Flask-Login.
+Line 7: Imports database instance `db` and model `TodoNote` from `models.py`.
+Line 9: Instantiates `todo_bp = Blueprint('nuha_todo', __name__, url_prefix='/nuha/todo')`.
+        All routes defined here will be prefixed with `/nuha/todo`.
+
+---
+
+[Lines 11-37: HTML Route — index()]
+Line 11-12: Defines `@todo_bp.route('/')` secured with `@login_required`.
+Line 14-16: Security Check: Verifies if `current_user.role` is 'Business Owner' or 'Business User'. If not, flashes an access denied error and redirects to the auth dashboard.
+Line 18-21: Workspace Check: Retrieves the user's business (`current_user.user_business`). If missing, redirects to workspace setup page (`nuha_workspace.index`).
+Line 24: Database Query: Executes `TodoNote.query.filter_by(business_id=business.id, owner_id=current_user.id).order_by(TodoNote.created_at.desc()).all()`.
+         This fetches all notes created by this user for their business, ordered newest first.
+Line 27-29: Python List Comprehensions: Categorizes notes into 3 distinct lists based on `type`:
+            - `tasks`: Entries where `type == 'Task'`
+            - `reminders`: Entries where `type == 'Reminder'`
+            - `quick_notes`: Entries where `type == 'Note'`
+Line 31-37: Renders `templates/nuha/todo.html`, passing `business`, `tasks`, `reminders`, and `quick_notes` into the Jinja2 template environment.
+
+---
+
+[Lines 39-70: HTML Route — create()]
+Line 39-40: Route `@todo_bp.route('/create', methods=['POST'])` handling new entry submissions from the web UI modal form.
+Line 42-47: Security & Workspace Check (Role verification and business existence check).
+Line 49-52: Extracts form inputs sent via POST: `title`, `description`, `type` (Task/Reminder/Note), and `status` (defaults to 'Pending').
+Line 54-56: Validation: Ensures `title` is provided. If empty, flashes error and redirects back.
+Line 58-65: Instantiates new `TodoNote` database object with the form data, binding it to `business.id` and `current_user.id`.
+Line 66-67: Adds `new_note` to session (`db.session.add`) and saves to SQLite (`db.session.commit()`).
+Line 68-70: Flashes success message and redirects to `nuha_todo.index`.
+
+---
+
+[Lines 72-98: HTML Route — update(note_id)]
+Line 72-73: Route `@todo_bp.route('/update/<int:note_id>', methods=['POST'])` to update an existing entry.
+Line 75: Queries database via `TodoNote.query.get_or_404(note_id)`. Returns HTTP 404 if ID does not exist.
+Line 78-80: Security Ownership Check: Verifies `note.owner_id == current_user.id`. Prevents users from modifying others' notes.
+Line 83-87: Quick Status Toggle Handling: If `status` is in `request.form` (e.g. clicking "Mark Done" or "Reopen" button), updates `note.status`, commits to DB, and redirects immediately.
+Line 90-95: Full Modal Edit Handling: If updating from the edit modal, updates `note.title` and `note.description`. Commits to DB.
+Line 96-98: Flashes 'Updated successfully.' and redirects to index.
+
+---
+
+[Lines 100-113: HTML Route — delete(note_id)]
+Line 100-101: Route `@todo_bp.route('/delete/<int:note_id>', methods=['POST'])` to delete a note by ID.
+Line 103-107: Retrieves note and checks ownership security (`note.owner_id == current_user.id`).
+Line 109-111: Deletes entry (`db.session.delete(note)`), commits transaction (`db.session.commit()`), and flashes success message.
+Line 113: Redirects back to `nuha_todo.index`.
+
+---
+
+[Lines 119-152: REST API — api_list()]
+Line 119-120: REST API route `@todo_bp.route('/api/list', methods=['GET'])`.
+Line 123-128: Role and workspace validation. Returns 403 Forbidden or 404 Not Found JSON if invalid.
+Line 130: Fetches all `TodoNote` records for the user's business and account.
+Line 132-139: Converts database objects into a clean array of Python dictionaries (`notes_data`) with formatted ISO timestamps.
+Line 141-145: Groups notes by status (`Pending`, `In Progress`, `Completed`).
+Line 147-152: Returns JSON response (`status: success`, `count`, `notes` array, `grouped_by_status` dictionary).
+
+---
+
+[Lines 154-207: REST API — api_create()]
+Line 154-155: REST API route `@todo_bp.route('/api/create', methods=['POST'])` supporting both JSON requests and Form submissions (`request.get_json(silent=True) or request.form`).
+Line 158-163: Validates permissions and workspace.
+Line 165-180: Sanitizes payload parameters (`title`, `description`, `type`/`category`, `status`). Ensures fallback defaults if fields are omitted.
+Line 182-183: Validates that `title` is present. Returns HTTP 400 Bad Request JSON if missing.
+Line 185-194: Creates `TodoNote` object and commits to SQLite DB.
+Line 196-207: Returns HTTP 201 Created JSON response containing created note attributes.
+
+---
+
+[Lines 209-249: REST API — api_edit(note_id)]
+Line 209-210: REST API route `@todo_bp.route('/api/edit/<int:note_id>', methods=['POST', 'PUT'])`.
+Line 213-221: Validates user permissions, note existence (404), and ownership (403).
+Line 223-234: Flexibly updates fields if present in payload (`title`, `description`/`content`, `type`, `status`).
+Line 236: Commits updates to database.
+Line 238-249: Returns JSON response with updated note object.
+
+---
+
+[Lines 251-269: REST API — api_delete(note_id)]
+Line 251-252: REST API route `@todo_bp.route('/api/delete/<int:note_id>', methods=['POST', 'DELETE'])`.
+Line 255-263: Validates role, checks note existence, and enforces ownership security.
+Line 265-266: Deletes note record from SQLite DB and commits transaction.
+Line 268: Returns JSON response `{'status': 'success', 'message': 'Deleted successfully.'}`.
+
+
+--------------------------------------------------------------------------------
+1.2 FRONTEND CODE EXPLANATION (templates/nuha/todo.html & _todo_card.html)
+--------------------------------------------------------------------------------
+
+### `todo.html` Breakdown:
+Line 1: `{% extends 'layout.html' %}` — Inherits main application wrapper, sidebar, and navbar.
+Line 3: Sets browser page title (`To-Do & Notes — MarketMind`).
+Line 6-16: Page header with action button (`New Entry` modal trigger using `data-bs-toggle="modal" data-bs-target="#createModal"`).
+Line 18-75: 3-Column Responsive Grid Layout (Bootstrap `row g-4`):
+           - Column 1 (Lines 20-36): **Tasks Column** (`col-lg-4`). Displays count badge `{{ tasks | length }}` and loops through `tasks` list using `{% include 'nuha/_todo_card.html' %}`.
+           - Column 2 (Lines 39-55): **Reminders Column**. Displays count badge `{{ reminders | length }}` and loops through `reminders` list.
+           - Column 3 (Lines 58-74): **Quick Notes Column**. Displays count badge `{{ quick_notes | length }}` and loops through `quick_notes` list.
+Line 77-111: **Create Entry Modal Dialog** (`#createModal`):
+             - Form posts to `url_for('nuha_todo.create')` via `POST`.
+             - Contains input fields for `type` (Select: Task/Reminder/Note), `title` (Text input), and `description` (Textarea).
+
+### `_todo_card.html` Partial Breakdown:
+Line 1-7: Card container displaying note title. If `note.status == 'Completed'`, applies CSS class `text-decoration-line-through text-muted`.
+Line 9-28: Dropdown Menu (Three dots button):
+           - Edit option: Opens specific edit modal `#editModal{{ note.id }}`.
+           - Delete option: Form posting to `url_for('nuha_todo.delete', note_id=note.id)`.
+Line 31-35: Displays truncated description (`{{ note.description | truncate(100) }}`).
+Line 38-61: Card Footer:
+           - Displays creation date (`{{ note.created_at.strftime('%b %d, %Y') }}`).
+           - For Tasks: Renders inline toggle button ("Mark Done" or "Reopen") submitting status update to `url_for('nuha_todo.update', note_id=note.id)`.
+           - For Reminders/Notes: Renders styled badge with category name.
+Line 66-91: **Individual Edit Modal** (`#editModal{{ note.id }}`): Pre-populates title and description fields for editing this specific entry.
+
+
+
+================================================================================
+2. FEATURE 04: STRATEGIC RECOMMENDATION REPORT
+================================================================================
+
+--------------------------------------------------------------------------------
+2.1 BACKEND CODE EXPLANATION (routes/nuha/strategic.py)
+--------------------------------------------------------------------------------
+
+[Lines 1-19: Module Header, Imports & API Constants]
+Line 1-3: Header comments identifying Feature 4: Strategic Recommendation Report.
+Line 5-10: Imports Python core modules (`os`, `requests`, `json`, `datetime`) and Flask components (`Blueprint`, `render_template`, `request`, `redirect`, `url_for`, `flash`, `jsonify`, `login_required`, `current_user`).
+Line 12: Imports database models (`db`, `AiAnalysis`, `Report`, `Competitor`, `Product`).
+Line 14: Instantiates `strategic_bp = Blueprint('nuha_strategic', __name__, url_prefix='/nuha/strategic')`.
+Line 16-18: Defines API endpoint URLs and fallback API keys:
+            - `GEMINI_API_URL`: Google Gemini 1.5 Flash endpoint.
+            - `NVIDIA_NIM_URL`: Meta Llama 3.1 8B Instruct model endpoint on NVIDIA NIM API.
+            - `DEFAULT_NVIDIA_KEY`: Default API key for NVIDIA Llama fallback.
+
+---
+
+[Lines 21-54: External AI Call 1 — call_gemini_api(prompt)]
+Line 21: Function definition accepting `prompt` string.
+Line 26-28: Checks if environment variable `GEMINI_API_KEY` is configured. Returns `None` if missing.
+Line 30-44: Constructs JSON POST request payload for Google Gemini API:
+            - URL: `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=...`
+            - Payload: `{"contents": [{"parts": [{"text": prompt}]}], "generationConfig": {"temperature": 0.7, "maxOutputTokens": 2048}}`
+            - Request Timeout: 25 seconds.
+Line 45-51: Parses HTTP 200 response: Traverses JSON path `candidates[0].content.parts[0].text` and returns clean markdown string.
+Line 52-54: Catches exceptions silently and returns `None` to allow fallback to trigger.
+
+---
+
+[Lines 57-88: External AI Call 2 (Fallback) — call_nvidia_llama_fallback(prompt)]
+Line 57: Fallback function calling Meta Llama 3.1 8B via NVIDIA NIM API.
+Line 61-63: Retrieves `NVIDIA_API_KEY` from environment or falls back to `DEFAULT_NVIDIA_KEY`.
+Line 66-81: Prepares Bearer token authorization headers and OpenAI-compatible Chat Completions payload (`model: meta/llama-3.1-8b-instruct`, system role prompt setting business analyst persona, temperature 0.7, max_tokens 1500).
+Line 82-85: Sends POST request to `NVIDIA_NIM_URL` (timeout 25s). On HTTP 200, returns generated response text (`choices[0].message.content`).
+Line 86-88: Returns `None` on failure/exception.
+
+---
+
+[Lines 91-167: Fail-Safe Generator — generate_heuristic_strategic_report(...)]
+Line 91: Structured fallback generator that executes if external AI API keys are unavailable/unreachable.
+Line 96-102: Safely extracts business details (`name`, `industry`, `description`, `niche`) and competitor list.
+Line 104-166: Generates a 100% complete, formatted Executive Strategic Report in Markdown string format, including:
+            - Title & Metadata Header (Target business, industry, focus area, competitor landscape, UTC date).
+            - Section 1: Executive Summary.
+            - Section 2: SWOT Analysis Matrix (Strengths, Weaknesses, Opportunities, Threats tailored to the business and competitors).
+            - Section 3: PESTEL Industry Framework (Political, Economic, Social, Technological, Environmental, Legal factors).
+            - Section 4: Strategic Marketing Recommendations & Action Plan (High Priority 0-30 days, Medium Term 30-90 days, Defensive Positioning 90+ days).
+Line 167: Returns `report_md` string.
+
+---
+
+[Lines 170-198: HTML Route — index()]
+Line 170-172: Route `@strategic_bp.route('/')` secured with `@login_required`.
+Line 174-181: Role security check and workspace existence validation.
+Line 184-187: Queries database for saved strategic reports: `AiAnalysis.query.filter_by(business_id=business.id, analysis_type='STRATEGIC_REPORT').order_by(AiAnalysis.created_at.desc()).all()`.
+Line 190: Queries tracked competitors: `Competitor.query.filter_by(business_id=business.id).all()`.
+Line 192-197: Renders `templates/nuha/strategic.html`, passing business profile, competitors, and saved reports.
+
+---
+
+[Lines 200-270: HTML Route — generate()]
+Line 200-202: Route `@strategic_bp.route('/generate', methods=['POST'])` handling report generation form submit.
+Line 204-211: Validates role and workspace.
+Line 213: Retrieves `focus_area` selected in form (defaults to 'Comprehensive Growth Strategy').
+Line 214-215: Fetches registered competitors and builds competitor summary string.
+Line 217-236: Constructs AI Prompt detailing business profile, niche, size, description, tracked competitors, and requested focus area.
+Line 239-247: Cascading AI Execution:
+             1. Calls `call_gemini_api(prompt)`.
+             2. If `None`, calls `call_nvidia_llama_fallback(prompt)`.
+             3. If `None`, calls `generate_heuristic_strategic_report(business, competitors, focus_area)`.
+Line 250-255: Saves generated report content into `AiAnalysis` model (`analysis_type='STRATEGIC_REPORT'`).
+Line 258-264: Also saves metadata record into `Report` model (`report_type='SWOT & PESTEL'`).
+Line 266: Commits transaction to SQLite database (`db.session.commit()`).
+Line 268-269: Flashes success message and redirects to `nuha_strategic.index`.
+
+---
+
+[Lines 272-290: AJAX Route — view_report(analysis_id)]
+Line 272-274: Route `@strategic_bp.route('/view/<int:analysis_id>')` for AJAX detail loading.
+Line 276-281: Fetches report via `AiAnalysis.query.get_or_404(analysis_id)` and verifies business ownership.
+Line 283-289: Returns JSON response containing report ID, analysis type, markdown content string, and formatted creation timestamp.
+
+---
+
+[Lines 294-308: HTML Route — delete(analysis_id)]
+Line 294-296: Route `@strategic_bp.route('/delete/<int:analysis_id>', methods=['POST'])`.
+Line 297-301: Fetches report and verifies business ownership.
+Line 303-304: Deletes record from `AiAnalysis` table and commits transaction.
+Line 306-307: Flashes deletion success message and redirects to index.
+
+---
+
+[Lines 314-342: REST API — api_list()]
+Line 314-316: REST API route `@strategic_bp.route('/api/list', methods=['GET'])`.
+Line 318-323: Validates role and workspace.
+Line 325-328: Queries all strategic report records for business.
+Line 330-335: Serializes records into JSON list with ISO timestamps.
+Line 337-341: Returns JSON response (`status: success`, `count`, `reports` array).
+
+---
+
+[Lines 344-398: REST API — api_generate()]
+Line 344-346: REST API route `@strategic_bp.route('/api/generate', methods=['POST'])`.
+Line 348-353: Validates role and workspace.
+Line 355-356: Parses JSON payload or Form data (`payload.get('focus_area')`).
+Line 358-367: Constructs prompt with workspace attributes and competitor summary.
+Line 369: Triggers cascading AI generation (Gemini -> NVIDIA Llama -> Heuristic fallback).
+Line 371-386: Saves new `AiAnalysis` and `Report` records to SQLite database.
+Line 388-397: Returns HTTP 201 Created JSON response containing created report ID and content.
+
+---
+
+[Lines 400-420: REST API — api_get(analysis_id)]
+Line 400-402: REST API route `@strategic_bp.route('/api/get/<int:analysis_id>', methods=['GET'])`.
+Line 404-410: Fetches report record (returns 404 if missing) and validates workspace ownership (403).
+Line 412-420: Returns JSON details of requested report.
+
+---
+
+[Lines 423-438: REST API — api_delete(analysis_id)]
+Line 423-425: REST API route `@strategic_bp.route('/api/delete/<int:analysis_id>', methods=['POST', 'DELETE'])`.
+Line 427-433: Fetches report record and validates business ownership.
+Line 435-436: Deletes report from DB and commits session.
+Line 438: Returns JSON response `{'status': 'success', 'message': 'Report deleted successfully.'}`.
+
+
+--------------------------------------------------------------------------------
+2.2 FRONTEND CODE EXPLANATION (templates/nuha/strategic.html)
+--------------------------------------------------------------------------------
+
+[Lines 1-32: Layout Extension & Custom CSS]
+Line 1: Extends `layout.html`.
+Line 5-32: Custom CSS styles:
+        - `.report-card`: Card hover animation (`transform: translateY(-2px)`, shadow elevation).
+        - `.swot-badge-s/w/o/t`: Custom color badge styles for Strengths (green), Weaknesses (red), Opportunities (amber), Threats (blue).
+        - `.markdown-body`: Custom typography styles for parsed Markdown headings (`h1`, `h2`, `h3`), lists, and dividers.
+
+[Lines 34-45: Page Title & Generate Action Button]
+Line 35-39: Displays page title ("Strategic Recommendation Report") and descriptive subtitle.
+Line 40-44: Renders "Generate New Report" button which triggers modal `#generateModal`.
+
+[Lines 47-67: Business Context Summary Bar]
+Line 48-66: 4-Column Summary Bar displaying active business workspace metadata:
+            - Column 1: Target Business Name (`{{ business.name }}`).
+            - Column 2: Industry Sector (`{{ business.industry }}`).
+            - Column 3: Market Niche (`{{ business.niche }}`).
+            - Column 4: Registered Competitor Count (`{{ competitors | length }}`).
+
+[Lines 69-150: Generated Executive Reports Grid]
+Line 73-76: Section header displaying saved report count badge (`{{ saved_reports | length }}`).
+Line 78-131: Jinja2 Loop `{% for report in saved_reports %}` rendering individual report cards:
+             - Line 84-90: Displays generation timestamp (`{{ report.created_at.strftime(...) }}`).
+             - Line 92-111: Dropdown menu for View Report modal (`openReportModal({{ report.id }})`) and Delete action form.
+             - Line 114-116: Displays report text snippet (`{{ report.content | replace('#', '') | replace('*', '') | truncate(220) }}`).
+             - Line 119-124: SWOT badges (Strengths, Weaknesses, Opportunities, Threats).
+             - Line 125-127: Modern rectangular primary button: `<button class="btn btn-sm btn-primary rounded-2 px-3 fw-semibold" onclick="openReportModal({{ report.id }})">`.
+Line 132-149: Empty state banner displayed if `saved_reports` list is empty.
+
+[Lines 152-193: Generate Report Form Modal (#generateModal)]
+Line 153-162: Modal structure & header.
+Line 163: Form action posting to `url_for('nuha_strategic.generate')` with loading spinner trigger (`onsubmit="showLoadingState(this)"`).
+Line 165-178: Select input for `focus_area` options:
+             - Comprehensive Growth Strategy (SWOT + PESTEL + Marketing)
+             - Market Expansion & Search Visibility Optimization
+             - Competitor Defense & Price Counter-Strategy
+             - Product & Niche Innovation Strategy
+             - Customer Retention & Brand Positioning
+Line 185-189: Modal submit button (`Generate Report`).
+
+[Lines 195-223: Full Report View Scrollable Modal (#viewReportModal)]
+Line 196-206: Large modal dialog (`modal-lg modal-dialog-scrollable`) with dynamic title and date header.
+Line 207-214: Container `#viewReportContent` where parsed Markdown HTML is injected by JavaScript.
+Line 215-220: Footer containing "Print / Save PDF" button (`onclick="window.print()"`) and Close button.
+
+[Lines 225-263: JavaScript Integration & Marked.js Parser]
+Line 226: Loads external JavaScript library `marked.min.js` (`https://cdn.jsdelivr.net/npm/marked/marked.min.js`) for client-side Markdown to HTML rendering.
+Line 228-232: `showLoadingState(form)`: Disables submit button and displays animated spinner during AI generation.
+Line 234-262: `openReportModal(reportId)`:
+             1. Opens Bootstrap modal `#viewReportModal`.
+             2. Shows loading spinner inside `#viewReportContent`.
+             3. Executes AJAX fetch: `fetch('/nuha/strategic/view/' + reportId)`.
+             4. On JSON response, parses markdown content via `marked.parse(data.content)` and injects rendered HTML into `#viewReportContent`.
+
+
+
+================================================================================
+3. API CALLS & DATA FLOW SUMMARY
+================================================================================
+
+--------------------------------------------------------------------------------
+3.1 EXTERNAL AI API INTEGRATIONS
+--------------------------------------------------------------------------------
+1. Google Gemini 1.5 Flash API:
+   - Endpoint: `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=...`
+   - Triggered By: `routes/nuha/strategic.py` -> `call_gemini_api(prompt)`
+   - Method: `POST` with JSON payload containing prompt text.
+
+2. Meta Llama 3.1 8B (NVIDIA NIM API):
+   - Endpoint: `https://integrate.api.nvidia.com/v1/chat/completions`
+   - Triggered By: `routes/nuha/strategic.py` -> `call_nvidia_llama_fallback(prompt)`
+   - Method: `POST` with Bearer token authentication header and Chat Completions JSON payload.
+
+--------------------------------------------------------------------------------
+3.2 INTERNAL REST JSON APIs & WEB FORM ACTIONS
+--------------------------------------------------------------------------------
+
+[Feature 03: To-Do & Quick Notes]
+- Web Index: `GET /nuha/todo/` -> Renders 3-column task/reminder/note dashboard.
+- Form Create: `POST /nuha/todo/create` -> Form submission creating new task/note.
+- Form Update: `POST /nuha/todo/update/<id>` -> Toggles status or updates title/desc.
+- Form Delete: `POST /nuha/todo/delete/<id>` -> Removes entry from SQLite DB.
+- REST List API: `GET /nuha/todo/api/list` -> JSON array grouped by status.
+- REST Create API: `POST /nuha/todo/api/create` -> JSON task creation (HTTP 201).
+- REST Edit API: `POST /api/edit/<id>` or `PUT /api/edit/<id>` -> JSON updates.
+- REST Delete API: `DELETE /nuha/todo/api/delete/<id>` -> JSON deletion.
+
+[Feature 04: Strategic Recommendation Report]
+- Web Index: `GET /nuha/strategic/` -> Renders strategic report dashboard.
+- Form Generate: `POST /nuha/strategic/generate` -> Generates report via AI & redirects.
+- Web View AJAX: `GET /nuha/strategic/view/<id>` -> Returns JSON content for modal reader.
+- Form Delete: `POST /nuha/strategic/delete/<id>` -> Deletes saved report.
+- REST List API: `GET /nuha/strategic/api/list` -> JSON array of saved reports.
+- REST Generate API: `POST /nuha/strategic/api/generate` -> Generates report via JSON payload.
+- REST Get API: `GET /nuha/strategic/api/get/<id>` -> Returns report JSON details.
+- REST Delete API: `DELETE /nuha/strategic/api/delete/<id>` -> Deletes report via REST API.
+
+================================================================================
+END OF CODE EXPLANATION DOCUMENT
+================================================================================
