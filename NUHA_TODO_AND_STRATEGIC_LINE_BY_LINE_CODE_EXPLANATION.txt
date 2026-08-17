@@ -1,387 +1,1449 @@
 ================================================================================
-MARKETMIND PLATFORM — NUHA FEATURES LINE-BY-LINE CODE EXPLANATION
+MARKETMIND PLATFORM — NUHA FEATURES COMPLETE CODE & LINE-BY-LINE EXPLANATION
 Feature 03: To-Do & Quick Notes Management (/nuha/todo)
 Feature 04: Strategic Recommendation Report (/nuha/strategic)
 ================================================================================
 
-TABLE OF CONTENTS
---------------------------------------------------------------------------------
-1. FEATURE 03: TO-DO & QUICK NOTES
-   1.1 Backend Code Explanation (routes/nuha/todo.py)
-   1.2 Frontend Code Explanation (templates/nuha/todo.html & _todo_card.html)
-
-2. FEATURE 04: STRATEGIC RECOMMENDATION REPORT
-   2.1 Backend Code Explanation (routes/nuha/strategic.py)
-   2.2 Frontend Code Explanation (templates/nuha/strategic.html)
-
-3. API CALLS & DATA FLOW SUMMARY
-   3.1 External AI API Integrations (Gemini & NVIDIA Meta Llama 3.1)
-   3.2 Internal REST JSON APIs & Web Form Actions
-================================================================================
+This document includes EVERY ORIGINAL CODE LINE paired with its direct line-by-line explanation.
 
 
 ================================================================================
-1. FEATURE 03: TO-DO & QUICK NOTES MANAGEMENT
+PART 1: FEATURE 03 — TO-DO & QUICK NOTES MANAGEMENT
 ================================================================================
 
 --------------------------------------------------------------------------------
-1.1 BACKEND CODE EXPLANATION (routes/nuha/todo.py)
+1.1 BACKEND: routes/nuha/todo.py
 --------------------------------------------------------------------------------
 
-[Lines 1-9: Module Header & Imports]
-Line 1-3: Header comments identifying Nuha's Feature 3 module.
-Line 5: Imports essential Flask components:
-        - `Blueprint`: Creates a modular component for routing.
-        - `render_template`: Renders HTML pages with Python variables.
-        - `request`: Accesses incoming form submissions and JSON payloads.
-        - `redirect`, `url_for`: Redirects the user to another page/route.
-        - `flash`: Displays temporary alert messages on the web UI.
-        - `jsonify`: Formats Python dictionaries into JSON responses for REST APIs.
-Line 6: Imports `login_required` (secures endpoints) and `current_user` (logged-in user session) from Flask-Login.
-Line 7: Imports database instance `db` and model `TodoNote` from `models.py`.
-Line 9: Instantiates `todo_bp = Blueprint('nuha_todo', __name__, url_prefix='/nuha/todo')`.
-        All routes defined here will be prefixed with `/nuha/todo`.
+--------------------------------------------------
+[BLOCK 1: IMPORTS & BLUEPRINT DEFINITION (Lines 1-9)]
+--------------------------------------------------
+ORIGINAL CODE:
+--------------------------------------------------
+# ==============================================================================
+# NUHA — Feature 3: To-Do & Quick Notes
+# ==============================================================================
 
----
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask_login import login_required, current_user
+from models import db, TodoNote
 
-[Lines 11-37: HTML Route — index()]
-Line 11-12: Defines `@todo_bp.route('/')` secured with `@login_required`.
-Line 14-16: Security Check: Verifies if `current_user.role` is 'Business Owner' or 'Business User'. If not, flashes an access denied error and redirects to the auth dashboard.
-Line 18-21: Workspace Check: Retrieves the user's business (`current_user.user_business`). If missing, redirects to workspace setup page (`nuha_workspace.index`).
-Line 24: Database Query: Executes `TodoNote.query.filter_by(business_id=business.id, owner_id=current_user.id).order_by(TodoNote.created_at.desc()).all()`.
-         This fetches all notes created by this user for their business, ordered newest first.
-Line 27-29: Python List Comprehensions: Categorizes notes into 3 distinct lists based on `type`:
-            - `tasks`: Entries where `type == 'Task'`
-            - `reminders`: Entries where `type == 'Reminder'`
-            - `quick_notes`: Entries where `type == 'Note'`
-Line 31-37: Renders `templates/nuha/todo.html`, passing `business`, `tasks`, `reminders`, and `quick_notes` into the Jinja2 template environment.
+todo_bp = Blueprint('nuha_todo', __name__, url_prefix='/nuha/todo')
+--------------------------------------------------
+EXPLANATION:
+- Line 1-3: Comment block designating this file as Nuha's Feature 3.
+- Line 5: Imports required Flask components:
+    * `Blueprint`: Organizes related routes into a modular group.
+    * `render_template`: Renders an HTML page and passes Python variables to Jinja2.
+    * `request`: Provides access to incoming HTTP request data (form inputs, JSON bodies).
+    * `redirect`: Sends an HTTP redirect response to the browser.
+    * `url_for`: Builds full URL paths dynamically based on blueprint endpoint names.
+    * `flash`: Queues temporary alert messages (success/danger) shown on the next page.
+    * `jsonify`: Converts Python dictionaries into JSON responses for REST APIs.
+- Line 6: Imports Flask-Login tools:
+    * `login_required`: Decorator that protects routes so only logged-in users can access them.
+    * `current_user`: Proxy object representing the currently logged-in user and their database fields.
+- Line 7: Imports the SQLAlchemy `db` instance and the `TodoNote` database table model from `models.py`.
+- Line 9: Creates the Flask Blueprint named `'nuha_todo'` with URL prefix `'/nuha/todo'`. All routes in this file start with `/nuha/todo`.
 
----
 
-[Lines 39-70: HTML Route — create()]
-Line 39-40: Route `@todo_bp.route('/create', methods=['POST'])` handling new entry submissions from the web UI modal form.
-Line 42-47: Security & Workspace Check (Role verification and business existence check).
-Line 49-52: Extracts form inputs sent via POST: `title`, `description`, `type` (Task/Reminder/Note), and `status` (defaults to 'Pending').
-Line 54-56: Validation: Ensures `title` is provided. If empty, flashes error and redirects back.
-Line 58-65: Instantiates new `TodoNote` database object with the form data, binding it to `business.id` and `current_user.id`.
-Line 66-67: Adds `new_note` to session (`db.session.add`) and saves to SQLite (`db.session.commit()`).
-Line 68-70: Flashes success message and redirects to `nuha_todo.index`.
+--------------------------------------------------
+[BLOCK 2: MAIN DASHBOARD VIEW — index() (Lines 11-37)]
+--------------------------------------------------
+ORIGINAL CODE:
+--------------------------------------------------
+@todo_bp.route('/')
+@login_required
+def index():
+    if current_user.role not in ['Business Owner', 'Business User']:
+        flash('Access denied.', 'danger')
+        return redirect(url_for('auth.dashboard'))
 
----
+    business = current_user.user_business
+    if not business:
+        flash('No business workspace found. Please configure your workspace first.', 'warning')
+        return redirect(url_for('nuha_workspace.index'))
 
-[Lines 72-98: HTML Route — update(note_id)]
-Line 72-73: Route `@todo_bp.route('/update/<int:note_id>', methods=['POST'])` to update an existing entry.
-Line 75: Queries database via `TodoNote.query.get_or_404(note_id)`. Returns HTTP 404 if ID does not exist.
-Line 78-80: Security Ownership Check: Verifies `note.owner_id == current_user.id`. Prevents users from modifying others' notes.
-Line 83-87: Quick Status Toggle Handling: If `status` is in `request.form` (e.g. clicking "Mark Done" or "Reopen" button), updates `note.status`, commits to DB, and redirects immediately.
-Line 90-95: Full Modal Edit Handling: If updating from the edit modal, updates `note.title` and `note.description`. Commits to DB.
-Line 96-98: Flashes 'Updated successfully.' and redirects to index.
+    # Fetch notes for this user's business
+    notes = TodoNote.query.filter_by(business_id=business.id, owner_id=current_user.id).order_by(TodoNote.created_at.desc()).all()
+    
+    # Filter for frontend convenience
+    tasks = [n for n in notes if n.type == 'Task']
+    reminders = [n for n in notes if n.type == 'Reminder']
+    quick_notes = [n for n in notes if n.type == 'Note']
 
----
+    return render_template(
+        'nuha/todo.html',
+        business=business,
+        tasks=tasks,
+        reminders=reminders,
+        quick_notes=quick_notes
+    )
+--------------------------------------------------
+EXPLANATION:
+- Line 11-12: `@todo_bp.route('/')` maps `GET /nuha/todo/` to `index()`. `@login_required` ensures only authenticated users enter.
+- Line 14-16: Role Security: Checks if `current_user.role` is 'Business Owner' or 'Business User'. If an unauthorized user (e.g. Field Agent) attempts access, shows an "Access denied" alert and redirects them.
+- Line 18-21: Workspace Validation: Calls `current_user.user_business` property to fetch the user's business. If no workspace exists yet, flashes a warning and redirects to the workspace setup page.
+- Line 24: Database Query: Executes `TodoNote.query.filter_by(...)` to get only notes belonging to this business AND created by this user (`owner_id=current_user.id`), sorted newest first by creation timestamp.
+- Line 27-29: List Comprehensions: Segregates the fetched notes into 3 categories:
+    * `tasks`: Items with `type == 'Task'` (actionable tasks with pending/completed states).
+    * `reminders`: Items with `type == 'Reminder'` (alerts/reminders).
+    * `quick_notes`: Items with `type == 'Note'` (general notes).
+- Line 31-37: Renders `templates/nuha/todo.html` and passes the categorized lists and `business` object into the template.
 
-[Lines 100-113: HTML Route — delete(note_id)]
-Line 100-101: Route `@todo_bp.route('/delete/<int:note_id>', methods=['POST'])` to delete a note by ID.
-Line 103-107: Retrieves note and checks ownership security (`note.owner_id == current_user.id`).
-Line 109-111: Deletes entry (`db.session.delete(note)`), commits transaction (`db.session.commit()`), and flashes success message.
-Line 113: Redirects back to `nuha_todo.index`.
 
----
+--------------------------------------------------
+[BLOCK 3: CREATE NOTE FORM ACTION — create() (Lines 39-70)]
+--------------------------------------------------
+ORIGINAL CODE:
+--------------------------------------------------
+@todo_bp.route('/create', methods=['POST'])
+@login_required
+def create():
+    if current_user.role not in ['Business Owner', 'Business User']:
+        return redirect(url_for('auth.dashboard'))
 
-[Lines 119-152: REST API — api_list()]
-Line 119-120: REST API route `@todo_bp.route('/api/list', methods=['GET'])`.
-Line 123-128: Role and workspace validation. Returns 403 Forbidden or 404 Not Found JSON if invalid.
-Line 130: Fetches all `TodoNote` records for the user's business and account.
-Line 132-139: Converts database objects into a clean array of Python dictionaries (`notes_data`) with formatted ISO timestamps.
-Line 141-145: Groups notes by status (`Pending`, `In Progress`, `Completed`).
-Line 147-152: Returns JSON response (`status: success`, `count`, `notes` array, `grouped_by_status` dictionary).
+    business = current_user.user_business
+    if not business:
+        return redirect(url_for('nuha_workspace.index'))
 
----
+    title = request.form.get('title')
+    description = request.form.get('description')
+    note_type = request.form.get('type') # Task, Reminder, Note
+    status = request.form.get('status', 'Pending')
 
-[Lines 154-207: REST API — api_create()]
-Line 154-155: REST API route `@todo_bp.route('/api/create', methods=['POST'])` supporting both JSON requests and Form submissions (`request.get_json(silent=True) or request.form`).
-Line 158-163: Validates permissions and workspace.
-Line 165-180: Sanitizes payload parameters (`title`, `description`, `type`/`category`, `status`). Ensures fallback defaults if fields are omitted.
-Line 182-183: Validates that `title` is present. Returns HTTP 400 Bad Request JSON if missing.
-Line 185-194: Creates `TodoNote` object and commits to SQLite DB.
-Line 196-207: Returns HTTP 201 Created JSON response containing created note attributes.
+    if not title:
+        flash('Title is required.', 'danger')
+        return redirect(url_for('nuha_todo.index'))
 
----
+    new_note = TodoNote(
+        title=title,
+        description=description,
+        type=note_type,
+        status=status,
+        business_id=business.id,
+        owner_id=current_user.id
+    )
+    db.session.add(new_note)
+    db.session.commit()
+    flash(f'{note_type} created successfully.', 'success')
 
-[Lines 209-249: REST API — api_edit(note_id)]
-Line 209-210: REST API route `@todo_bp.route('/api/edit/<int:note_id>', methods=['POST', 'PUT'])`.
-Line 213-221: Validates user permissions, note existence (404), and ownership (403).
-Line 223-234: Flexibly updates fields if present in payload (`title`, `description`/`content`, `type`, `status`).
-Line 236: Commits updates to database.
-Line 238-249: Returns JSON response with updated note object.
+    return redirect(url_for('nuha_todo.index'))
+--------------------------------------------------
+EXPLANATION:
+- Line 39-41: Maps `POST /nuha/todo/create` to handle new note creation from the web UI modal.
+- Line 42-47: Security & workspace validation.
+- Line 49-52: Extracts submitted form fields (`request.form.get`):
+    * `title`: Note title.
+    * `description`: Extra details/content.
+    * `note_type`: 'Task', 'Reminder', or 'Note'.
+    * `status`: Defaults to 'Pending'.
+- Line 54-56: Validation check: Ensures `title` is not empty. If missing, flashes error and redirects.
+- Line 58-65: Creates a new `TodoNote` instance with the form values and associates it with `business.id` and `current_user.id`.
+- Line 66: `db.session.add(new_note)` stages the new record for insertion.
+- Line 67: `db.session.commit()` executes the SQL `INSERT` statement into the SQLite database.
+- Line 68-70: Flashes confirmation alert and reloads the dashboard via `redirect(url_for('nuha_todo.index'))`.
 
----
 
-[Lines 251-269: REST API — api_delete(note_id)]
-Line 251-252: REST API route `@todo_bp.route('/api/delete/<int:note_id>', methods=['POST', 'DELETE'])`.
-Line 255-263: Validates role, checks note existence, and enforces ownership security.
-Line 265-266: Deletes note record from SQLite DB and commits transaction.
-Line 268: Returns JSON response `{'status': 'success', 'message': 'Deleted successfully.'}`.
+--------------------------------------------------
+[BLOCK 4: UPDATE NOTE — update(note_id) (Lines 72-98)]
+--------------------------------------------------
+ORIGINAL CODE:
+--------------------------------------------------
+@todo_bp.route('/update/<int:note_id>', methods=['POST'])
+@login_required
+def update(note_id):
+    note = TodoNote.query.get_or_404(note_id)
+    
+    # Security check
+    if note.owner_id != current_user.id:
+        flash('Access denied.', 'danger')
+        return redirect(url_for('nuha_todo.index'))
+
+    # Quick status toggle OR full update
+    new_status = request.form.get('status')
+    if new_status:
+        note.status = new_status
+        db.session.commit()
+        return redirect(url_for('nuha_todo.index'))
+
+    # Full update from modal
+    title = request.form.get('title')
+    description = request.form.get('description')
+    if title:
+        note.title = title
+    note.description = description
+    db.session.commit()
+    flash('Updated successfully.', 'success')
+
+    return redirect(url_for('nuha_todo.index'))
+--------------------------------------------------
+EXPLANATION:
+- Line 72-74: Maps `POST /nuha/todo/update/<note_id>` to update an existing note.
+- Line 75: Retrieves note record by ID from database or returns 404 Not Found error if it doesn't exist.
+- Line 78-80: Authorization Check: Ensures only the creator (`note.owner_id == current_user.id`) can edit the note.
+- Line 83-87: Quick Status Toggle Logic: If the form contains `status` (e.g. clicking "Mark Done" sends `status=Completed`, clicking "Reopen" sends `status=Pending`), updates `note.status`, commits to DB, and redirects immediately without needing modal text fields.
+- Line 90-95: Full Modal Edit Logic: If updating from the edit modal, updates `note.title` and `note.description`.
+- Line 95-98: Commits changes to database, flashes success alert, and redirects to dashboard.
+
+
+--------------------------------------------------
+[BLOCK 5: DELETE NOTE — delete(note_id) (Lines 100-113)]
+--------------------------------------------------
+ORIGINAL CODE:
+--------------------------------------------------
+@todo_bp.route('/delete/<int:note_id>', methods=['POST'])
+@login_required
+def delete(note_id):
+    note = TodoNote.query.get_or_404(note_id)
+    
+    if note.owner_id != current_user.id:
+        flash('Access denied.', 'danger')
+        return redirect(url_for('nuha_todo.index'))
+
+    db.session.delete(note)
+    db.session.commit()
+    flash('Deleted successfully.', 'success')
+
+    return redirect(url_for('nuha_todo.index'))
+--------------------------------------------------
+EXPLANATION:
+- Line 100-102: Maps `POST /nuha/todo/delete/<note_id>` to delete a note.
+- Line 103-107: Retrieves note and validates ownership.
+- Line 109: `db.session.delete(note)` stages SQL `DELETE` operation.
+- Line 110: `db.session.commit()` permanently removes the record from SQLite.
+- Line 111-113: Flashes 'Deleted successfully.' and redirects back to dashboard.
+
+
+--------------------------------------------------
+[BLOCK 6: REST API — api_list() (Lines 119-152)]
+--------------------------------------------------
+ORIGINAL CODE:
+--------------------------------------------------
+@todo_bp.route('/api/list', methods=['GET'])
+@login_required
+def api_list():
+    """REST API: Returns JSON array of user's to-do notes/tasks grouped by status."""
+    if current_user.role not in ['Business Owner', 'Business User']:
+        return jsonify({'status': 'error', 'message': 'Access denied.'}), 403
+
+    business = current_user.user_business
+    if not business:
+        return jsonify({'status': 'error', 'message': 'No business workspace found.'}), 404
+
+    notes = TodoNote.query.filter_by(business_id=business.id, owner_id=current_user.id).order_by(TodoNote.created_at.desc()).all()
+
+    notes_data = [{
+        'id': n.id,
+        'title': n.title,
+        'description': n.description,
+        'status': n.status,
+        'type': n.type,
+        'created_at': n.created_at.isoformat() if n.created_at else None
+    } for n in notes]
+
+    grouped_by_status = {
+        'Pending': [n for n in notes_data if n['status'] == 'Pending'],
+        'In Progress': [n for n in notes_data if n['status'] == 'In Progress'],
+        'Completed': [n for n in notes_data if n['status'] == 'Completed']
+    }
+
+    return jsonify({
+        'status': 'success',
+        'count': len(notes_data),
+        'notes': notes_data,
+        'grouped_by_status': grouped_by_status
+    })
+--------------------------------------------------
+EXPLANATION:
+- Line 119-121: Defines REST API endpoint `GET /nuha/todo/api/list`.
+- Line 123-128: Permission checks returning structured JSON errors (`403 Forbidden` / `404 Not Found`).
+- Line 130: Queries all notes for the authenticated user and business.
+- Line 132-139: Serializes SQLAlchemy model objects into a JSON-compatible Python dictionary list with ISO-formatted datetime strings.
+- Line 141-145: Groups notes by their current lifecycle status (`Pending`, `In Progress`, `Completed`).
+- Line 147-152: Returns HTTP 200 JSON payload with `count`, `notes` array, and `grouped_by_status` map.
+
+
+--------------------------------------------------
+[BLOCK 7: REST API — api_create() (Lines 154-207)]
+--------------------------------------------------
+ORIGINAL CODE:
+--------------------------------------------------
+@todo_bp.route('/api/create', methods=['POST'])
+@login_required
+def api_create():
+    """REST API: Accepts JSON payload or Form data to create a new task/note."""
+    if current_user.role not in ['Business Owner', 'Business User']:
+        return jsonify({'status': 'error', 'message': 'Access denied.'}), 403
+
+    business = current_user.user_business
+    if not business:
+        return jsonify({'status': 'error', 'message': 'No business workspace found.'}), 404
+
+    payload = request.get_json(silent=True) or request.form
+
+    title = payload.get('title', '').strip() if payload.get('title') is not None else ''
+    description = payload.get('description', '')
+    if not description and payload.get('content'):
+        description = payload.get('content')
+    if description is not None:
+        description = str(description).strip()
+
+    note_type = payload.get('type') or payload.get('category') or 'Task'
+    if note_type is not None:
+        note_type = str(note_type).strip()
+
+    status = payload.get('status', 'Pending')
+    if status is not None:
+        status = str(status).strip()
+
+    if not title:
+        return jsonify({'status': 'error', 'message': 'Title is required.'}), 400
+
+    new_note = TodoNote(
+        title=title,
+        description=description,
+        type=note_type,
+        status=status,
+        business_id=business.id,
+        owner_id=current_user.id
+    )
+    db.session.add(new_note)
+    db.session.commit()
+
+    return jsonify({
+        'status': 'success',
+        'message': f'{note_type} created successfully.',
+        'note': {
+            'id': new_note.id,
+            'title': new_note.title,
+            'description': new_note.description,
+            'type': new_note.type,
+            'status': new_note.status,
+            'created_at': new_note.created_at.isoformat() if new_note.created_at else None
+        }
+    }), 201
+--------------------------------------------------
+EXPLANATION:
+- Line 154-156: Defines REST API endpoint `POST /nuha/todo/api/create`.
+- Line 165: Robust payload extractor: checks `request.get_json(silent=True)` first; if absent, falls back to `request.form` (enables seamless Postman and mobile integration).
+- Line 167-180: Extracts and sanitizes parameters. Accepts alias names (`content` for `description`, `category` for `type`).
+- Line 182-183: If `title` is missing, returns HTTP 400 JSON error.
+- Line 185-194: Creates and commits the new `TodoNote` database entity.
+- Line 196-207: Returns HTTP 201 Created status code with JSON confirmation containing the newly created note's attributes.
+
+
+--------------------------------------------------
+[BLOCK 8: REST API — api_edit() & api_delete() (Lines 209-269)]
+--------------------------------------------------
+ORIGINAL CODE:
+--------------------------------------------------
+@todo_bp.route('/api/edit/<int:note_id>', methods=['POST', 'PUT'])
+@login_required
+def api_edit(note_id):
+    """REST API: Accepts JSON payload or Form data to update note attributes."""
+    if current_user.role not in ['Business Owner', 'Business User']:
+        return jsonify({'status': 'error', 'message': 'Access denied.'}), 403
+
+    note = TodoNote.query.get(note_id)
+    if not note:
+        return jsonify({'status': 'error', 'message': 'Note not found.'}), 404
+
+    if note.owner_id != current_user.id:
+        return jsonify({'status': 'error', 'message': 'Access denied.'}), 403
+
+    payload = request.get_json(silent=True) or request.form
+
+    if payload.get('title') is not None:
+        note.title = str(payload.get('title')).strip()
+    if payload.get('description') is not None:
+        note.description = str(payload.get('description')).strip()
+    elif payload.get('content') is not None:
+        note.description = str(payload.get('content')).strip()
+    if payload.get('type') is not None:
+        note.type = str(payload.get('type')).strip()
+    if payload.get('status') is not None:
+        note.status = str(payload.get('status')).strip()
+
+    db.session.commit()
+
+    return jsonify({
+        'status': 'success',
+        'message': 'Updated successfully.',
+        'note': {
+            'id': note.id,
+            'title': note.title,
+            'description': note.description,
+            'type': note.type,
+            'status': note.status,
+            'created_at': note.created_at.isoformat() if note.created_at else None
+        }
+    })
+
+@todo_bp.route('/api/delete/<int:note_id>', methods=['POST', 'DELETE'])
+@login_required
+def api_delete(note_id):
+    """REST API: Deletes a note by ID and returns JSON status."""
+    if current_user.role not in ['Business Owner', 'Business User']:
+        return jsonify({'status': 'error', 'message': 'Access denied.'}), 403
+
+    note = TodoNote.query.get(note_id)
+    if not note:
+        return jsonify({'status': 'error', 'message': 'Note not found.'}), 404
+
+    if note.owner_id != current_user.id:
+        return jsonify({'status': 'error', 'message': 'Access denied.'}), 403
+
+    db.session.delete(note)
+    db.session.commit()
+
+    return jsonify({'status': 'success', 'message': 'Deleted successfully.'})
+--------------------------------------------------
+EXPLANATION:
+- Line 209-249 (`api_edit`):
+    * Accepts `POST` or `PUT` methods.
+    * Verifies user permissions and note ownership.
+    * Updates only fields supplied in payload.
+    * Commits changes and returns updated note JSON.
+- Line 251-269 (`api_delete`):
+    * Accepts `POST` or `DELETE` methods.
+    * Verifies user permissions and note ownership.
+    * Removes entity from SQLite and returns success message.
 
 
 --------------------------------------------------------------------------------
-1.2 FRONTEND CODE EXPLANATION (templates/nuha/todo.html & _todo_card.html)
+1.2 FRONTEND: templates/nuha/todo.html & _todo_card.html
 --------------------------------------------------------------------------------
 
-### `todo.html` Breakdown:
-Line 1: `{% extends 'layout.html' %}` — Inherits main application wrapper, sidebar, and navbar.
-Line 3: Sets browser page title (`To-Do & Notes — MarketMind`).
-Line 6-16: Page header with action button (`New Entry` modal trigger using `data-bs-toggle="modal" data-bs-target="#createModal"`).
-Line 18-75: 3-Column Responsive Grid Layout (Bootstrap `row g-4`):
-           - Column 1 (Lines 20-36): **Tasks Column** (`col-lg-4`). Displays count badge `{{ tasks | length }}` and loops through `tasks` list using `{% include 'nuha/_todo_card.html' %}`.
-           - Column 2 (Lines 39-55): **Reminders Column**. Displays count badge `{{ reminders | length }}` and loops through `reminders` list.
-           - Column 3 (Lines 58-74): **Quick Notes Column**. Displays count badge `{{ quick_notes | length }}` and loops through `quick_notes` list.
-Line 77-111: **Create Entry Modal Dialog** (`#createModal`):
-             - Form posts to `url_for('nuha_todo.create')` via `POST`.
-             - Contains input fields for `type` (Select: Task/Reminder/Note), `title` (Text input), and `description` (Textarea).
+--------------------------------------------------
+[todo.html: Header & Kanban Layout (Lines 1-75)]
+--------------------------------------------------
+ORIGINAL CODE:
+--------------------------------------------------
+{% extends 'layout.html' %}
 
-### `_todo_card.html` Partial Breakdown:
-Line 1-7: Card container displaying note title. If `note.status == 'Completed'`, applies CSS class `text-decoration-line-through text-muted`.
-Line 9-28: Dropdown Menu (Three dots button):
-           - Edit option: Opens specific edit modal `#editModal{{ note.id }}`.
-           - Delete option: Form posting to `url_for('nuha_todo.delete', note_id=note.id)`.
-Line 31-35: Displays truncated description (`{{ note.description | truncate(100) }}`).
-Line 38-61: Card Footer:
-           - Displays creation date (`{{ note.created_at.strftime('%b %d, %Y') }}`).
-           - For Tasks: Renders inline toggle button ("Mark Done" or "Reopen") submitting status update to `url_for('nuha_todo.update', note_id=note.id)`.
-           - For Reminders/Notes: Renders styled badge with category name.
-Line 66-91: **Individual Edit Modal** (`#editModal{{ note.id }}`): Pre-populates title and description fields for editing this specific entry.
+{% block title %}To-Do & Notes — MarketMind{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1">To-Do & Quick Notes</h2>
+        <p class="text-muted small mb-0">Manage your tasks, set reminders, and jot down quick notes.</p>
+    </div>
+    <div class="mt-3 mt-md-0">
+        <button class="btn btn-primary-custom rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#createModal">
+            <i class="bi bi-plus-lg me-2"></i>New Entry
+        </button>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Tasks Column -->
+    <div class="col-lg-4">
+        <div class="card card-custom border-0 shadow-sm h-100 bg-light">
+            <div class="card-header bg-transparent border-0 pt-4 pb-0">
+                <h5 class="fw-bold text-dark d-flex align-items-center">
+                    <i class="bi bi-check2-square text-primary me-2"></i>Tasks
+                    <span class="badge bg-secondary ms-auto rounded-pill">{{ tasks | length }}</span>
+                </h5>
+            </div>
+            <div class="card-body">
+                {% for note in tasks %}
+                    {% include 'nuha/_todo_card.html' %}
+                {% else %}
+                    <p class="text-muted small text-center mt-3">No active tasks.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Reminders Column -->
+    <div class="col-lg-4">
+        <div class="card card-custom border-0 shadow-sm h-100 bg-light">
+            <div class="card-header bg-transparent border-0 pt-4 pb-0">
+                <h5 class="fw-bold text-dark d-flex align-items-center">
+                    <i class="bi bi-bell text-warning me-2"></i>Reminders
+                    <span class="badge bg-secondary ms-auto rounded-pill">{{ reminders | length }}</span>
+                </h5>
+            </div>
+            <div class="card-body">
+                {% for note in reminders %}
+                    {% include 'nuha/_todo_card.html' %}
+                {% else %}
+                    <p class="text-muted small text-center mt-3">No reminders set.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Notes Column -->
+    <div class="col-lg-4">
+        <div class="card card-custom border-0 shadow-sm h-100 bg-light">
+            <div class="card-header bg-transparent border-0 pt-4 pb-0">
+                <h5 class="fw-bold text-dark d-flex align-items-center">
+                    <i class="bi bi-journal-text text-success me-2"></i>Quick Notes
+                    <span class="badge bg-secondary ms-auto rounded-pill">{{ quick_notes | length }}</span>
+                </h5>
+            </div>
+            <div class="card-body">
+                {% for note in quick_notes %}
+                    {% include 'nuha/_todo_card.html' %}
+                {% else %}
+                    <p class="text-muted small text-center mt-3">No quick notes yet.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+--------------------------------------------------
+EXPLANATION:
+- Line 1: `{% extends 'layout.html' %}` integrates the shared sidebar, top navigation, and CSS frameworks.
+- Line 3: Customizes title tag to `To-Do & Notes — MarketMind`.
+- Line 6-15: Displays header banner with "New Entry" button triggering Bootstrap modal `#createModal`.
+- Line 18-75: Generates a responsive 3-column Kanban layout (`col-lg-4`):
+    * Column 1: Tasks list. Shows count badge `{{ tasks | length }}` and loops through `tasks` using partial `_todo_card.html`.
+    * Column 2: Reminders list. Shows count badge `{{ reminders | length }}` and loops through `reminders`.
+    * Column 3: Quick Notes list. Shows count badge `{{ quick_notes | length }}` and loops through `quick_notes`.
+
+
+--------------------------------------------------
+[_todo_card.html: Individual Card Partial (Lines 1-92)]
+--------------------------------------------------
+ORIGINAL CODE:
+--------------------------------------------------
+<!-- Partial for a single Todo/Note card -->
+<div class="card border-0 shadow-sm mb-3 bg-white" style="border-radius: 12px; transition: transform 0.2s;">
+    <div class="card-body p-3">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <h6 class="fw-bold mb-0 text-dark {% if note.status == 'Completed' %}text-decoration-line-through text-muted{% endif %}">
+                {{ note.title }}
+            </h6>
+            <!-- Dropdown Menu -->
+            <div class="dropdown">
+                <button class="btn btn-sm btn-link text-muted p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-three-dots-vertical"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0" style="border-radius: 10px;">
+                    <li>
+                        <button class="dropdown-item small" data-bs-toggle="modal" data-bs-target="#editModal{{ note.id }}">
+                            <i class="bi bi-pencil me-2 text-primary"></i> Edit
+                        </button>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <form action="{{ url_for('nuha_todo.delete', note_id=note.id) }}" method="POST" class="d-inline">
+                            <button type="submit" class="dropdown-item small text-danger">
+                                <i class="bi bi-trash me-2"></i> Delete
+                            </button>
+                        </form>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        {% if note.description %}
+        <p class="small text-muted mb-2" style="font-size: 0.8rem; line-height: 1.4;">
+            {{ note.description | truncate(100) }}
+        </p>
+        {% endif %}
+
+        <!-- Status Toggle -->
+        <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top">
+            <span class="text-muted" style="font-size: 0.7rem;">
+                {{ note.created_at.strftime('%b %d, %Y') }}
+            </span>
+            {% if note.type == 'Task' %}
+                <form action="{{ url_for('nuha_todo.update', note_id=note.id) }}" method="POST">
+                    {% if note.status == 'Pending' %}
+                        <input type="hidden" name="status" value="Completed">
+                        <button type="submit" class="btn btn-sm btn-outline-success rounded-pill" style="font-size: 0.7rem; padding: 2px 10px;">
+                            Mark Done
+                        </button>
+                    {% else %}
+                        <input type="hidden" name="status" value="Pending">
+                        <button type="submit" class="btn btn-sm btn-light rounded-pill" style="font-size: 0.7rem; padding: 2px 10px;">
+                            Reopen
+                        </button>
+                    {% endif %}
+                </form>
+            {% else %}
+                <span class="badge {% if note.type == 'Reminder' %}bg-warning text-dark{% else %}bg-success{% endif %} bg-opacity-10 rounded-pill px-2" style="font-size: 0.7rem;">
+                    {{ note.type }}
+                </span>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Edit Modal for this specific note -->
+<div class="modal fade" id="editModal{{ note.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow" style="border-radius: 16px;">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Edit {{ note.type }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('nuha_todo.update', note_id=note.id) }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-muted">Title</label>
+                        <input type="text" name="title" class="form-control border-0 bg-light" value="{{ note.title }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-muted">Description</label>
+                        <textarea name="description" class="form-control border-0 bg-light" rows="3">{{ note.description }}</textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light rounded-pill" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary-custom rounded-pill px-4">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+--------------------------------------------------
+EXPLANATION:
+- Line 2-7: Displays note card title. Applies strikethrough CSS style (`text-decoration-line-through`) when `note.status == 'Completed'`.
+- Line 9-28: Three-dots action dropdown menu. Contains Edit button (opens `#editModal{{ note.id }}`) and Delete form.
+- Line 31-35: Displays note description truncated to 100 characters for tidy card presentation.
+- Line 38-61: Card Footer:
+    * Displays formatted date `{{ note.created_at.strftime('%b %d, %Y') }}`.
+    * If `note.type == 'Task'`, renders an inline form toggle: if `Pending`, clicking button sends `status=Completed` ("Mark Done"); if `Completed`, sends `status=Pending` ("Reopen").
+    * If `Reminder` or `Note`, renders a color-coded pill badge.
+- Line 66-91: Individual Edit Modal scoped uniquely to each note (`id="editModal{{ note.id }}"`), pre-populating current title and description for updating.
 
 
 
 ================================================================================
-2. FEATURE 04: STRATEGIC RECOMMENDATION REPORT
+PART 2: FEATURE 04 — STRATEGIC RECOMMENDATION REPORT
 ================================================================================
 
 --------------------------------------------------------------------------------
-2.1 BACKEND CODE EXPLANATION (routes/nuha/strategic.py)
+2.1 BACKEND: routes/nuha/strategic.py
 --------------------------------------------------------------------------------
 
-[Lines 1-19: Module Header, Imports & API Constants]
-Line 1-3: Header comments identifying Feature 4: Strategic Recommendation Report.
-Line 5-10: Imports Python core modules (`os`, `requests`, `json`, `datetime`) and Flask components (`Blueprint`, `render_template`, `request`, `redirect`, `url_for`, `flash`, `jsonify`, `login_required`, `current_user`).
-Line 12: Imports database models (`db`, `AiAnalysis`, `Report`, `Competitor`, `Product`).
-Line 14: Instantiates `strategic_bp = Blueprint('nuha_strategic', __name__, url_prefix='/nuha/strategic')`.
-Line 16-18: Defines API endpoint URLs and fallback API keys:
-            - `GEMINI_API_URL`: Google Gemini 1.5 Flash endpoint.
-            - `NVIDIA_NIM_URL`: Meta Llama 3.1 8B Instruct model endpoint on NVIDIA NIM API.
-            - `DEFAULT_NVIDIA_KEY`: Default API key for NVIDIA Llama fallback.
+--------------------------------------------------
+[BLOCK 1: IMPORTS & API CONFIGURATION (Lines 1-19)]
+--------------------------------------------------
+ORIGINAL CODE:
+--------------------------------------------------
+# ==============================================================================
+# NUHA — Feature 4: Strategic Recommendation Report (SWOT & PESTEL + Marketing)
+# ==============================================================================
+
+import os
+import requests
+import json
+from datetime import datetime
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask_login import login_required, current_user
+
+from models import db, AiAnalysis, Report, Competitor, Product
+
+strategic_bp = Blueprint('nuha_strategic', __name__, url_prefix='/nuha/strategic')
+
+GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
+NVIDIA_NIM_URL = "https://integrate.api.nvidia.com/v1/chat/completions"
+DEFAULT_NVIDIA_KEY = "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"
+--------------------------------------------------
+EXPLANATION:
+- Line 1-3: Header comments for Feature 4: Strategic Recommendation Report.
+- Line 5-10: Imports `requests` (for making external HTTPS API calls), `os` (for environment variables), `datetime` (timestamps), and Flask web/API utilities.
+- Line 12: Imports database models: `db`, `AiAnalysis` (AI reports), `Report` (reporting records), `Competitor` (market rivals), and `Product`.
+- Line 14: Creates blueprint `strategic_bp` with URL prefix `'/nuha/strategic'`.
+- Line 16-18: Defines external API endpoints and default fallback credentials:
+    * `GEMINI_API_URL`: Endpoint for Google Gemini 1.5 Flash.
+    * `NVIDIA_NIM_URL`: Endpoint for NVIDIA NIM hosted Meta Llama 3.1 8B LLM.
+    * `DEFAULT_NVIDIA_KEY`: Default API key for seamless fallback execution.
+
+
+--------------------------------------------------
+[BLOCK 2: AI CALL 1 — call_gemini_api(prompt) (Lines 21-55)]
+--------------------------------------------------
+ORIGINAL CODE:
+--------------------------------------------------
+def call_gemini_api(prompt):
+    """
+    Calls Google Gemini 1.5 Flash API to generate strategic recommendations.
+    Returns generated content string or None if unconfigured/failed.
+    """
+    api_key = os.getenv('GEMINI_API_KEY')
+    if not api_key:
+        return None
+
+    try:
+        url = f"{GEMINI_API_URL}?key={api_key}"
+        headers = {"Content-Type": "application/json"}
+        payload = {
+            "contents": [
+                {
+                    "parts": [{"text": prompt}]
+                }
+            ],
+            "generationConfig": {
+                "temperature": 0.7,
+                "maxOutputTokens": 2048
+            }
+        }
+        resp = requests.post(url, headers=headers, json=payload, timeout=25)
+        if resp.status_code == 200:
+            data = resp.json()
+            candidates = data.get('candidates', [])
+            if candidates:
+                parts = candidates[0].get('content', {}).get('parts', [])
+                if parts:
+                    return parts[0].get('text', '').strip()
+    except Exception:
+        pass
+    return None
+--------------------------------------------------
+EXPLANATION:
+- Line 21-25: Function header and docstring.
+- Line 26-28: Checks `os.getenv('GEMINI_API_KEY')`. If unconfigured, returns `None` immediately to let the next engine take over.
+- Line 30-43: Builds the Gemini REST payload:
+    * Adds API key to URL query parameter.
+    * Passes prompt in `contents[0].parts[0].text`.
+    * Sets temperature to 0.7 and token limit to 2048.
+- Line 44: Sends HTTPS POST request with a 25-second timeout limit.
+- Line 45-51: If response is 200 OK, navigates JSON response (`data['candidates'][0]['content']['parts'][0]['text']`) and returns the markdown text.
+- Line 52-54: Catches any network/API exception safely without crashing the server.
+
+
+--------------------------------------------------
+[BLOCK 3: AI CALL 2 (FALLBACK) — call_nvidia_llama_fallback(prompt) (Lines 57-89)]
+--------------------------------------------------
+ORIGINAL CODE:
+--------------------------------------------------
+def call_nvidia_llama_fallback(prompt):
+    """
+    Fallback call to Meta Llama 3.1 8B via NVIDIA NIM API if Gemini API is unavailable.
+    """
+    api_key = os.getenv('NVIDIA_API_KEY') or DEFAULT_NVIDIA_KEY
+    if not api_key:
+        return None
+
+    try:
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "model": "meta/llama-3.1-8b-instruct",
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "You are MarketMind Strategic AI, an expert business analyst specializing in SWOT analysis, PESTEL frameworks, competitive market positioning, and strategic growth marketing for small businesses."
+                },
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0.7,
+            "max_tokens": 1500
+        }
+        resp = requests.post(NVIDIA_NIM_URL, headers=headers, json=payload, timeout=25)
+        if resp.status_code == 200:
+            data = resp.json()
+            return data['choices'][0]['message']['content'].strip()
+    except Exception:
+        pass
+    return None
+--------------------------------------------------
+EXPLANATION:
+- Line 57-60: Function header and docstring for Meta Llama 3.1 fallback engine.
+- Line 61-63: Reads `NVIDIA_API_KEY` from environment or uses `DEFAULT_NVIDIA_KEY`.
+- Line 65-81: Prepares OpenAI-compatible Chat Completion structure:
+    * `Authorization: Bearer <key>` header.
+    * `model`: `meta/llama-3.1-8b-instruct`.
+    * `system` message: Sets business intelligence analyst persona.
+    * `user` message: Supplies formatted prompt.
+- Line 82-85: Sends HTTPS POST to `NVIDIA_NIM_URL`. On 200 OK, extracts generated report from `data['choices'][0]['message']['content']`.
+- Line 86-88: Safe error handling returning `None` if unreachable.
+
+
+--------------------------------------------------
+[BLOCK 4: HEURISTIC REPORT GENERATOR (Lines 91-167)]
+--------------------------------------------------
+ORIGINAL CODE:
+--------------------------------------------------
+def generate_heuristic_strategic_report(business, competitors, focus_area):
+    """
+    Structured fallback report generator when external AI API keys are unavailable.
+    Guarantees that the feature always produces a high quality, professional report.
+    """
+    b_name = business.name if business else "Your Business"
+    b_ind = business.industry if business else "General Industry"
+    b_desc = business.description if (business and business.description) else "No description provided."
+    b_niche = business.niche if (business and business.niche) else "General Market"
+
+    comp_names = [c.name for c in competitors] if competitors else ["Local & Regional Competitors"]
+    comp_list_str = ", ".join(comp_names)
+
+    report_md = f"""# Executive Strategic Recommendation Report: {b_name}
+
+**Target Business:** {b_name}  
+**Industry Sector:** {b_ind} ({b_niche})  
+**Primary Focus Area:** {focus_area or 'Comprehensive Strategic Positioning'}  
+**Competitor Landscape:** {comp_list_str}  
+**Date of Analysis:** {datetime.utcnow().strftime('%B %d, %Y')}  
 
 ---
 
-[Lines 21-54: External AI Call 1 — call_gemini_api(prompt)]
-Line 21: Function definition accepting `prompt` string.
-Line 26-28: Checks if environment variable `GEMINI_API_KEY` is configured. Returns `None` if missing.
-Line 30-44: Constructs JSON POST request payload for Google Gemini API:
-            - URL: `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=...`
-            - Payload: `{"contents": [{"parts": [{"text": prompt}]}], "generationConfig": {"temperature": 0.7, "maxOutputTokens": 2048}}`
-            - Request Timeout: 25 seconds.
-Line 45-51: Parses HTTP 200 response: Traverses JSON path `candidates[0].content.parts[0].text` and returns clean markdown string.
-Line 52-54: Catches exceptions silently and returns `None` to allow fallback to trigger.
+## 1. Executive Summary
+{b_name} operates in the **{b_ind}** sector. To maintain competitive advantage against tracked competitors ({comp_list_str}), {b_name} must capitalize on its agility, leverage niche differentiation, and execute targeted digital marketing strategies. This strategic report provides an in-depth **SWOT Analysis**, **PESTEL Analysis**, and an **Actionable Marketing Strategy**.
 
 ---
 
-[Lines 57-88: External AI Call 2 (Fallback) — call_nvidia_llama_fallback(prompt)]
-Line 57: Fallback function calling Meta Llama 3.1 8B via NVIDIA NIM API.
-Line 61-63: Retrieves `NVIDIA_API_KEY` from environment or falls back to `DEFAULT_NVIDIA_KEY`.
-Line 66-81: Prepares Bearer token authorization headers and OpenAI-compatible Chat Completions payload (`model: meta/llama-3.1-8b-instruct`, system role prompt setting business analyst persona, temperature 0.7, max_tokens 1500).
-Line 82-85: Sends POST request to `NVIDIA_NIM_URL` (timeout 25s). On HTTP 200, returns generated response text (`choices[0].message.content`).
-Line 86-88: Returns `None` on failure/exception.
+## 2. SWOT Analysis Matrix
+
+### 🟢 Strengths (Internal Advantages)
+- **Niche Positioning:** Strong target focus on {b_niche}, enabling high customer relevance.
+- **Operational Agility:** Faster decision-making cycle compared to larger competitors like {comp_names[0] if comp_names else 'industry rivals'}.
+- **Direct Customer Engagement:** Personalized customer service and localized brand loyalty.
+
+### 🔴 Weaknesses (Internal Vulnerabilities)
+- **Brand Awareness Gap:** Lower search visibility score compared to established competitors.
+- **Resource Constraints:** Limited budget for enterprise-scale marketing automation.
+- **Product Portfolio Breadth:** Single-niche dependency requiring ongoing product line expansion.
+
+### 🟡 Opportunities (External Potential)
+- **Digital & Social Media Expansion:** High ROI opportunity in hyper-targeted social ad campaigns.
+- **Unmet Market Demand:** Exploiting product/service features that competitors ({comp_list_str}) currently overlook.
+- **Strategic Partnerships:** Collaborating with complementary non-competing regional brands.
+
+### 🔵 Threats (External Risks)
+- **Aggressive Pricing Warfare:** Competitors cutting prices to capture market share.
+- **Shift in Consumer Preferences:** Evolving buying patterns requiring rapid digital transformation.
+- **Supply Chain & Operational Costs:** Inflationary pressures impacting margin health.
 
 ---
 
-[Lines 91-167: Fail-Safe Generator — generate_heuristic_strategic_report(...)]
-Line 91: Structured fallback generator that executes if external AI API keys are unavailable/unreachable.
-Line 96-102: Safely extracts business details (`name`, `industry`, `description`, `niche`) and competitor list.
-Line 104-166: Generates a 100% complete, formatted Executive Strategic Report in Markdown string format, including:
-            - Title & Metadata Header (Target business, industry, focus area, competitor landscape, UTC date).
-            - Section 1: Executive Summary.
-            - Section 2: SWOT Analysis Matrix (Strengths, Weaknesses, Opportunities, Threats tailored to the business and competitors).
-            - Section 3: PESTEL Industry Framework (Political, Economic, Social, Technological, Environmental, Legal factors).
-            - Section 4: Strategic Marketing Recommendations & Action Plan (High Priority 0-30 days, Medium Term 30-90 days, Defensive Positioning 90+ days).
-Line 167: Returns `report_md` string.
+## 3. PESTEL Industry Framework
+
+- **🏛️ Political:** Regulatory compliance, local commerce policies, and tax structures affecting small business operations in {b_ind}.
+- **📈 Economic:** Interest rates, consumer discretionary spending capacity, and inflation impacting pricing elasticity.
+- **👥 Social:** Customer demand for transparent sourcing, instant communication, and digital accessibility.
+- **💻 Technological:** Adoption of AI-driven analytics, live location tools, and omni-channel customer service.
+- **🌿 Environmental:** Growing consumer preference for eco-friendly packaging and sustainable practices.
+- **⚖️ Legal:** Data privacy laws (GDPR/local guidelines) and trade mark protections for new products.
 
 ---
 
-[Lines 170-198: HTML Route — index()]
-Line 170-172: Route `@strategic_bp.route('/')` secured with `@login_required`.
-Line 174-181: Role security check and workspace existence validation.
-Line 184-187: Queries database for saved strategic reports: `AiAnalysis.query.filter_by(business_id=business.id, analysis_type='STRATEGIC_REPORT').order_by(AiAnalysis.created_at.desc()).all()`.
-Line 190: Queries tracked competitors: `Competitor.query.filter_by(business_id=business.id).all()`.
-Line 192-197: Renders `templates/nuha/strategic.html`, passing business profile, competitors, and saved reports.
+## 4. Strategic Marketing Recommendations & Action Plan
 
----
+### 🚀 High Priority (0 - 30 Days)
+1. **Hyper-Local SEO Optimization:** Audit and optimize search keywords matching `{b_niche}` to outrank competitors in Google search results.
+2. **Competitive Price Positioning:** Review competitor catalog pricing monthly and introduce flexible value-tier bundles.
 
-[Lines 200-270: HTML Route — generate()]
-Line 200-202: Route `@strategic_bp.route('/generate', methods=['POST'])` handling report generation form submit.
-Line 204-211: Validates role and workspace.
-Line 213: Retrieves `focus_area` selected in form (defaults to 'Comprehensive Growth Strategy').
-Line 214-215: Fetches registered competitors and builds competitor summary string.
-Line 217-236: Constructs AI Prompt detailing business profile, niche, size, description, tracked competitors, and requested focus area.
-Line 239-247: Cascading AI Execution:
-             1. Calls `call_gemini_api(prompt)`.
-             2. If `None`, calls `call_nvidia_llama_fallback(prompt)`.
-             3. If `None`, calls `generate_heuristic_strategic_report(business, competitors, focus_area)`.
-Line 250-255: Saves generated report content into `AiAnalysis` model (`analysis_type='STRATEGIC_REPORT'`).
-Line 258-264: Also saves metadata record into `Report` model (`report_type='SWOT & PESTEL'`).
-Line 266: Commits transaction to SQLite database (`db.session.commit()`).
-Line 268-269: Flashes success message and redirects to `nuha_strategic.index`.
+### 📈 Medium Term (30 - 90 Days)
+3. **Targeted Social Proof Campaign:** Launch customer review incentives and video testimonials highlighting advantages over {comp_names[0] if comp_names else 'competitors'}.
+4. **Loyalty Program Rollout:** Implement a customer retention reward scheme to increase repeat transaction frequency.
 
----
+### 🛡️ Defensive Positioning (90+ Days)
+5. **AI & Automated Engagement:** Integrate AI-driven chat and automated email workflows to nurture prospective clients 24/7.
+"""
+    return report_md
+--------------------------------------------------
+EXPLANATION:
+- Line 91-95: Function header and docstring.
+- Line 96-102: Safely reads business profile attributes (`name`, `industry`, `description`, `niche`) and constructs competitor names string (`comp_list_str`).
+- Line 104-166: Dynamically builds a complete Executive Strategic Report formatted in clean Markdown with 4 comprehensive sections:
+    1. Executive Summary tailored to the company's industry and tracked rivals.
+    2. SWOT Analysis Matrix with 4 distinct categories (Strengths, Weaknesses, Opportunities, Threats).
+    3. PESTEL Framework covering all 6 macro-environmental dimensions (Political, Economic, Social, Technological, Environmental, Legal).
+    4. Strategic Marketing Recommendations prioritized into 3 time horizons (0-30 Days, 30-90 Days, 90+ Days).
+- Line 167: Returns formatted markdown string.
 
-[Lines 272-290: AJAX Route — view_report(analysis_id)]
-Line 272-274: Route `@strategic_bp.route('/view/<int:analysis_id>')` for AJAX detail loading.
-Line 276-281: Fetches report via `AiAnalysis.query.get_or_404(analysis_id)` and verifies business ownership.
-Line 283-289: Returns JSON response containing report ID, analysis type, markdown content string, and formatted creation timestamp.
 
----
+--------------------------------------------------
+[BLOCK 5: HTML ROUTES — index(), generate(), view_report(), delete() (Lines 170-308)]
+--------------------------------------------------
+ORIGINAL CODE:
+--------------------------------------------------
+@strategic_bp.route('/')
+@login_required
+def index():
+    """Main view: Lists saved strategic reports and provides generator controls."""
+    if current_user.role not in ['Business Owner', 'Business User']:
+        flash('Access denied.', 'danger')
+        return redirect(url_for('auth.dashboard'))
 
-[Lines 294-308: HTML Route — delete(analysis_id)]
-Line 294-296: Route `@strategic_bp.route('/delete/<int:analysis_id>', methods=['POST'])`.
-Line 297-301: Fetches report and verifies business ownership.
-Line 303-304: Deletes record from `AiAnalysis` table and commits transaction.
-Line 306-307: Flashes deletion success message and redirects to index.
+    business = current_user.user_business
+    if not business:
+        flash('No business workspace found. Please configure your workspace first.', 'warning')
+        return redirect(url_for('nuha_workspace.index'))
 
----
+    # Fetch stored strategic reports
+    saved_reports = AiAnalysis.query.filter_by(
+        business_id=business.id,
+        analysis_type='STRATEGIC_REPORT'
+    ).order_by(AiAnalysis.created_at.desc()).all()
 
-[Lines 314-342: REST API — api_list()]
-Line 314-316: REST API route `@strategic_bp.route('/api/list', methods=['GET'])`.
-Line 318-323: Validates role and workspace.
-Line 325-328: Queries all strategic report records for business.
-Line 330-335: Serializes records into JSON list with ISO timestamps.
-Line 337-341: Returns JSON response (`status: success`, `count`, `reports` array).
+    # Fetch competitors for context
+    competitors = Competitor.query.filter_by(business_id=business.id).all()
 
----
+    return render_template(
+        'nuha/strategic.html',
+        business=business,
+        competitors=competitors,
+        saved_reports=saved_reports
+    )
 
-[Lines 344-398: REST API — api_generate()]
-Line 344-346: REST API route `@strategic_bp.route('/api/generate', methods=['POST'])`.
-Line 348-353: Validates role and workspace.
-Line 355-356: Parses JSON payload or Form data (`payload.get('focus_area')`).
-Line 358-367: Constructs prompt with workspace attributes and competitor summary.
-Line 369: Triggers cascading AI generation (Gemini -> NVIDIA Llama -> Heuristic fallback).
-Line 371-386: Saves new `AiAnalysis` and `Report` records to SQLite database.
-Line 388-397: Returns HTTP 201 Created JSON response containing created report ID and content.
 
----
+@strategic_bp.route('/generate', methods=['POST'])
+@login_required
+def generate():
+    """Form route: Generates a new Strategic Recommendation Report via Gemini AI."""
+    if current_user.role not in ['Business Owner', 'Business User']:
+        flash('Access denied.', 'danger')
+        return redirect(url_for('auth.dashboard'))
 
-[Lines 400-420: REST API — api_get(analysis_id)]
-Line 400-402: REST API route `@strategic_bp.route('/api/get/<int:analysis_id>', methods=['GET'])`.
-Line 404-410: Fetches report record (returns 404 if missing) and validates workspace ownership (403).
-Line 412-420: Returns JSON details of requested report.
+    business = current_user.user_business
+    if not business:
+        flash('Please configure your business workspace first.', 'warning')
+        return redirect(url_for('nuha_workspace.index'))
 
----
+    focus_area = request.form.get('focus_area', 'Comprehensive Growth Strategy').strip()
+    competitors = Competitor.query.filter_by(business_id=business.id).all()
+    comp_summary = "\n".join([f"- {c.name} ({c.industry}): {c.description or 'No desc'} (Visibility Score: {c.search_visibility_score})" for c in competitors])
 
-[Lines 423-438: REST API — api_delete(analysis_id)]
-Line 423-425: REST API route `@strategic_bp.route('/api/delete/<int:analysis_id>', methods=['POST', 'DELETE'])`.
-Line 427-433: Fetches report record and validates business ownership.
-Line 435-436: Deletes report from DB and commits session.
-Line 438: Returns JSON response `{'status': 'success', 'message': 'Report deleted successfully.'}`.
+    prompt = f"""
+You are MarketMind Strategic AI. Generate a comprehensive, executive Strategic Recommendation Report for the following business:
+
+**Business Name:** {business.name}
+**Industry:** {business.industry}
+**Niche:** {business.niche or 'General'}
+**Company Size:** {business.company_size or 'Small Business'}
+**Description:** {business.description or 'N/A'}
+
+**Tracked Competitors:**
+{comp_summary or 'No specific competitors registered yet.'}
+
+**Strategic Focus Requested:** {focus_area}
+
+Please output a beautifully structured Markdown report with:
+1. Executive Summary
+2. Detailed SWOT Analysis (Strengths, Weaknesses, Opportunities, Threats) tailored to competing against the listed competitors.
+3. PESTEL Analysis (Political, Economic, Social, Technological, Environmental, Legal factors impacting this industry).
+4. Strategic Marketing Recommendations & Actionable Steps (High Priority, Medium Term, Defensive Positioning).
+"""
+
+    # 1. Try Gemini API
+    ai_content = call_gemini_api(prompt)
+
+    # 2. Try Llama 3.1 fallback via NVIDIA NIM
+    if not ai_content:
+        ai_content = call_nvidia_llama_fallback(prompt)
+
+    # 3. Fallback to heuristic generator if APIs fail/unconfigured
+    if not ai_content:
+        ai_content = generate_heuristic_strategic_report(business, competitors, focus_area)
+
+    # Save to AiAnalysis model
+    analysis = AiAnalysis(
+        analysis_type='STRATEGIC_REPORT',
+        content=ai_content,
+        business_id=business.id
+    )
+    db.session.add(analysis)
+
+    # Also save to Report model for standard reporting records
+    report_record = Report(
+        title=f"Strategic Report - {focus_area} ({datetime.utcnow().strftime('%b %d')})",
+        report_type='SWOT & PESTEL',
+        file_path='',
+        business_id=business.id
+    )
+    db.session.add(report_record)
+
+    db.session.commit()
+
+    flash('Strategic Recommendation Report generated successfully!', 'success')
+    return redirect(url_for('nuha_strategic.index'))
+
+
+@strategic_bp.route('/view/<int:analysis_id>')
+@login_required
+def view_report(analysis_id):
+    """View details of a specific saved strategic report."""
+    analysis = AiAnalysis.query.get_or_404(analysis_id)
+    business = current_user.user_business
+
+    if not business or analysis.business_id != business.id:
+        flash('Access denied.', 'danger')
+        return redirect(url_for('nuha_strategic.index'))
+
+    return jsonify({
+        'status': 'success',
+        'id': analysis.id,
+        'analysis_type': analysis.analysis_type,
+        'content': analysis.content,
+        'created_at': analysis.created_at.strftime('%Y-%m-%d %H:%M:%S')
+    })
+
+
+@strategic_bp.route('/delete/<int:analysis_id>', methods=['POST'])
+@login_required
+def delete(analysis_id):
+    """Deletes a saved strategic report."""
+    analysis = AiAnalysis.query.get_or_404(analysis_id)
+    business = current_user.user_business
+
+    if not business or analysis.business_id != business.id:
+        flash('Access denied.', 'danger')
+        return redirect(url_for('nuha_strategic.index'))
+
+    db.session.delete(analysis)
+    db.session.commit()
+
+    flash('Strategic report deleted successfully.', 'success')
+    return redirect(url_for('nuha_strategic.index'))
+--------------------------------------------------
+EXPLANATION:
+- Line 170-198 (`index()`):
+    * Verifies role and workspace.
+    * Queries `AiAnalysis` for reports where `analysis_type == 'STRATEGIC_REPORT'`.
+    * Queries `Competitor` table for all tracked competitors.
+    * Renders `templates/nuha/strategic.html`.
+- Line 200-270 (`generate()`):
+    * Reads `focus_area` from form submit.
+    * Compiles prompt with business profile + competitor details.
+    * Cascading AI pipeline: Gemini -> NVIDIA Llama 3.1 -> Heuristic fallback.
+    * Saves report markdown in `AiAnalysis` table and metadata entry in `Report` table.
+    * Commits transaction and redirects with flash message.
+- Line 272-290 (`view_report(analysis_id)`):
+    * AJAX endpoint called by JavaScript when clicking "Read Full Report".
+    * Validates workspace ownership and returns report JSON.
+- Line 294-308 (`delete(analysis_id)`):
+    * Validates ownership, deletes the `AiAnalysis` record, commits to DB, and redirects.
+
+
+--------------------------------------------------
+[BLOCK 6: REST APIS — api_list(), api_generate(), api_get(), api_delete() (Lines 314-439)]
+--------------------------------------------------
+ORIGINAL CODE:
+--------------------------------------------------
+@strategic_bp.route('/api/list', methods=['GET'])
+@login_required
+def api_list():
+    """REST API: Returns JSON array of saved strategic recommendation reports."""
+    if current_user.role not in ['Business Owner', 'Business User']:
+        return jsonify({'status': 'error', 'message': 'Access denied.'}), 403
+
+    business = current_user.user_business
+    if not business:
+        return jsonify({'status': 'error', 'message': 'No business workspace found.'}), 404
+
+    reports = AiAnalysis.query.filter_by(
+        business_id=business.id,
+        analysis_type='STRATEGIC_REPORT'
+    ).order_by(AiAnalysis.created_at.desc()).all()
+
+    data = [{
+        'id': r.id,
+        'analysis_type': r.analysis_type,
+        'content': r.content,
+        'created_at': r.created_at.isoformat() if r.created_at else None
+    } for r in reports]
+
+    return jsonify({
+        'status': 'success',
+        'count': len(data),
+        'reports': data
+    })
+
+
+@strategic_bp.route('/api/generate', methods=['POST'])
+@login_required
+def api_generate():
+    """REST API: Triggers strategic report generation via JSON request."""
+    if current_user.role not in ['Business Owner', 'Business User']:
+        return jsonify({'status': 'error', 'message': 'Access denied.'}), 403
+
+    business = current_user.user_business
+    if not business:
+        return jsonify({'status': 'error', 'message': 'No business workspace found.'}), 404
+
+    payload = request.get_json(silent=True) or request.form
+    focus_area = payload.get('focus_area', 'Comprehensive Growth Strategy')
+
+    competitors = Competitor.query.filter_by(business_id=business.id).all()
+    comp_summary = "\n".join([f"- {c.name} ({c.industry}): {c.description or 'No desc'}" for c in competitors])
+
+    prompt = f"""
+Generate an executive Strategic Recommendation Report (SWOT, PESTEL, and Marketing Strategy) for:
+Business: {business.name} ({business.industry}, Niche: {business.niche or 'General'})
+Description: {business.description or 'N/A'}
+Competitors: {comp_summary or 'General market rivals'}
+Focus Area: {focus_area}
+"""
+
+    ai_content = call_gemini_api(prompt) or call_nvidia_llama_fallback(prompt) or generate_heuristic_strategic_report(business, competitors, focus_area)
+
+    analysis = AiAnalysis(
+        analysis_type='STRATEGIC_REPORT',
+        content=ai_content,
+        business_id=business.id
+    )
+    db.session.add(analysis)
+
+    report_record = Report(
+        title=f"Strategic Report - {focus_area}",
+        report_type='SWOT & PESTEL',
+        file_path='',
+        business_id=business.id
+    )
+    db.session.add(report_record)
+
+    db.session.commit()
+
+    return jsonify({
+        'status': 'success',
+        'message': 'Strategic report generated successfully.',
+        'report': {
+            'id': analysis.id,
+            'analysis_type': analysis.analysis_type,
+            'content': analysis.content,
+            'created_at': analysis.created_at.isoformat() if analysis.created_at else None
+        }
+    }), 201
+
+
+@strategic_bp.route('/api/get/<int:analysis_id>', methods=['GET'])
+@login_required
+def api_get(analysis_id):
+    """REST API: Returns JSON details of a single report."""
+    analysis = AiAnalysis.query.get(analysis_id)
+    if not analysis:
+        return jsonify({'status': 'error', 'message': 'Report not found.'}), 404
+
+    business = current_user.user_business
+    if not business or analysis.business_id != business.id:
+        return jsonify({'status': 'error', 'message': 'Access denied.'}), 403
+
+    return jsonify({
+        'status': 'success',
+        'report': {
+            'id': analysis.id,
+            'analysis_type': analysis.analysis_type,
+            'content': analysis.content,
+            'created_at': analysis.created_at.isoformat() if analysis.created_at else None
+        }
+    })
+
+
+@strategic_bp.route('/api/delete/<int:analysis_id>', methods=['POST', 'DELETE'])
+@login_required
+def api_delete(analysis_id):
+    """REST API: Deletes a strategic report."""
+    analysis = AiAnalysis.query.get(analysis_id)
+    if not analysis:
+        return jsonify({'status': 'error', 'message': 'Report not found.'}), 404
+
+    business = current_user.user_business
+    if not business or analysis.business_id != business.id:
+        return jsonify({'status': 'error', 'message': 'Access denied.'}), 403
+
+    db.session.delete(analysis)
+    db.session.commit()
+
+    return jsonify({'status': 'success', 'message': 'Report deleted successfully.'})
+--------------------------------------------------
+EXPLANATION:
+- Line 314-342 (`api_list`): REST API returning list of all strategic reports as JSON.
+- Line 344-398 (`api_generate`): REST API endpoint accepting JSON `{ "focus_area": "..." }`, running cascading AI analysis, creating DB records, and returning HTTP 201 Created with report JSON.
+- Line 400-420 (`api_get`): REST API returning JSON of a single report by ID.
+- Line 423-438 (`api_delete`): REST API deleting report by ID and returning JSON confirmation.
 
 
 --------------------------------------------------------------------------------
-2.2 FRONTEND CODE EXPLANATION (templates/nuha/strategic.html)
+2.2 FRONTEND: templates/nuha/strategic.html
 --------------------------------------------------------------------------------
 
-[Lines 1-32: Layout Extension & Custom CSS]
-Line 1: Extends `layout.html`.
-Line 5-32: Custom CSS styles:
-        - `.report-card`: Card hover animation (`transform: translateY(-2px)`, shadow elevation).
-        - `.swot-badge-s/w/o/t`: Custom color badge styles for Strengths (green), Weaknesses (red), Opportunities (amber), Threats (blue).
-        - `.markdown-body`: Custom typography styles for parsed Markdown headings (`h1`, `h2`, `h3`), lists, and dividers.
+--------------------------------------------------
+[strategic.html: Template Code & Explanation (Lines 1-264)]
+--------------------------------------------------
+ORIGINAL CODE:
+--------------------------------------------------
+{% extends 'layout.html' %}
 
-[Lines 34-45: Page Title & Generate Action Button]
-Line 35-39: Displays page title ("Strategic Recommendation Report") and descriptive subtitle.
-Line 40-44: Renders "Generate New Report" button which triggers modal `#generateModal`.
+{% block title %}Strategic Recommendation Report — MarketMind{% endblock %}
 
-[Lines 47-67: Business Context Summary Bar]
-Line 48-66: 4-Column Summary Bar displaying active business workspace metadata:
-            - Column 1: Target Business Name (`{{ business.name }}`).
-            - Column 2: Industry Sector (`{{ business.industry }}`).
-            - Column 3: Market Niche (`{{ business.niche }}`).
-            - Column 4: Registered Competitor Count (`{{ competitors | length }}`).
+{% block extra_css %}
+<style>
+    .report-card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        border-radius: 14px;
+    }
+    .report-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.06) !important;
+    }
+    .swot-badge-s { background-color: rgba(16, 185, 129, 0.12); color: #047857; font-weight: 600; }
+    .swot-badge-w { background-color: rgba(239, 68, 68, 0.12); color: #B91C1C; font-weight: 600; }
+    .swot-badge-o { background-color: rgba(245, 158, 11, 0.12); color: #B45309; font-weight: 600; }
+    .swot-badge-t { background-color: rgba(59, 130, 246, 0.12); color: #1D4ED8; font-weight: 600; }
+    .markdown-body h1, .markdown-body h2, .markdown-body h3 {
+        font-weight: 700;
+        margin-top: 1.25rem;
+        margin-bottom: 0.75rem;
+        color: #0F172A;
+    }
+    .markdown-body h1 { font-size: 1.5rem; border-bottom: 2px solid #E2E8F0; padding-bottom: 0.5rem; }
+    .markdown-body h2 { font-size: 1.25rem; color: #1E293B; }
+    .markdown-body h3 { font-size: 1.05rem; }
+    .markdown-body ul, .markdown-body ol { padding-left: 1.25rem; }
+    .markdown-body p { line-height: 1.6; color: #334155; }
+    .markdown-body hr { margin: 1.5rem 0; border-color: #E2E8F0; }
+</style>
+{% endblock %}
 
-[Lines 69-150: Generated Executive Reports Grid]
-Line 73-76: Section header displaying saved report count badge (`{{ saved_reports | length }}`).
-Line 78-131: Jinja2 Loop `{% for report in saved_reports %}` rendering individual report cards:
-             - Line 84-90: Displays generation timestamp (`{{ report.created_at.strftime(...) }}`).
-             - Line 92-111: Dropdown menu for View Report modal (`openReportModal({{ report.id }})`) and Delete action form.
-             - Line 114-116: Displays report text snippet (`{{ report.content | replace('#', '') | replace('*', '') | truncate(220) }}`).
-             - Line 119-124: SWOT badges (Strengths, Weaknesses, Opportunities, Threats).
-             - Line 125-127: Modern rectangular primary button: `<button class="btn btn-sm btn-primary rounded-2 px-3 fw-semibold" onclick="openReportModal({{ report.id }})">`.
-Line 132-149: Empty state banner displayed if `saved_reports` list is empty.
+{% block content %}
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1"><i class="bi bi-graph-up-arrow text-primary me-2"></i>Strategic Recommendation Report</h2>
+        <p class="text-muted small mb-0">Generate AI-driven SWOT & PESTEL market reasoning reports tailored to {{ business.name }} via Google Gemini API.</p>
+    </div>
+    <div class="mt-3 mt-md-0 d-flex gap-2">
+        <button class="btn btn-primary-custom rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#generateModal">
+            <i class="bi bi-magic me-2"></i>Generate New Report
+        </button>
+    </div>
+</div>
 
-[Lines 152-193: Generate Report Form Modal (#generateModal)]
-Line 153-162: Modal structure & header.
-Line 163: Form action posting to `url_for('nuha_strategic.generate')` with loading spinner trigger (`onsubmit="showLoadingState(this)"`).
-Line 165-178: Select input for `focus_area` options:
-             - Comprehensive Growth Strategy (SWOT + PESTEL + Marketing)
-             - Market Expansion & Search Visibility Optimization
-             - Competitor Defense & Price Counter-Strategy
-             - Product & Niche Innovation Strategy
-             - Customer Retention & Brand Positioning
-Line 185-189: Modal submit button (`Generate Report`).
+<!-- Business Context Bar -->
+<div class="card card-custom border-0 shadow-sm mb-4 bg-white p-3 rounded-4">
+    <div class="row align-items-center">
+        <div class="col-md-3 border-end border-light">
+            <span class="text-muted small text-uppercase fw-semibold d-block">Target Business</span>
+            <span class="fw-bold text-dark fs-6">{{ business.name }}</span>
+        </div>
+        <div class="col-md-3 border-end border-light">
+            <span class="text-muted small text-uppercase fw-semibold d-block">Industry Sector</span>
+            <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-3 py-1 fw-bold">{{ business.industry }}</span>
+        </div>
+        <div class="col-md-3 border-end border-light">
+            <span class="text-muted small text-uppercase fw-semibold d-block">Market Niche</span>
+            <span class="fw-semibold text-secondary fs-7">{{ business.niche or 'General Market' }}</span>
+        </div>
+        <div class="col-md-3">
+            <span class="text-muted small text-uppercase fw-semibold d-block">Tracked Competitors</span>
+            <span class="badge bg-dark bg-opacity-10 text-dark rounded-pill px-3 py-1 fw-bold">{{ competitors | length }} Registered</span>
+        </div>
+    </div>
+</div>
 
-[Lines 195-223: Full Report View Scrollable Modal (#viewReportModal)]
-Line 196-206: Large modal dialog (`modal-lg modal-dialog-scrollable`) with dynamic title and date header.
-Line 207-214: Container `#viewReportContent` where parsed Markdown HTML is injected by JavaScript.
-Line 215-220: Footer containing "Print / Save PDF" button (`onclick="window.print()"`) and Close button.
+<!-- Saved Strategic Reports Section -->
+<div class="row g-4 mb-4">
+    <div class="col-12">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-file-earmark-bar-graph text-success me-2"></i>Generated Executive Reports</h5>
+            <span class="badge bg-secondary rounded-pill">{{ saved_reports | length }} Reports</span>
+        </div>
+    </div>
 
-[Lines 225-263: JavaScript Integration & Marked.js Parser]
-Line 226: Loads external JavaScript library `marked.min.js` (`https://cdn.jsdelivr.net/npm/marked/marked.min.js`) for client-side Markdown to HTML rendering.
-Line 228-232: `showLoadingState(form)`: Disables submit button and displays animated spinner during AI generation.
-Line 234-262: `openReportModal(reportId)`:
-             1. Opens Bootstrap modal `#viewReportModal`.
-             2. Shows loading spinner inside `#viewReportContent`.
-             3. Executes AJAX fetch: `fetch('/nuha/strategic/view/' + reportId)`.
-             4. On JSON response, parses markdown content via `marked.parse(data.content)` and injects rendered HTML into `#viewReportContent`.
+    {% if saved_reports %}
+        {% for report in saved_reports %}
+        <div class="col-lg-6">
+            <div class="card card-custom report-card border-0 shadow-sm h-100 bg-white p-4">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-3 py-1 mb-2 fw-semibold" style="font-size: 0.75rem;">
+                            <i class="bi bi-cpu me-1"></i>AI SWOT & PESTEL
+                        </span>
+                        <h5 class="fw-bold text-dark mb-1">Strategic Recommendation Report</h5>
+                        <p class="text-muted small mb-0">
+                            <i class="bi bi-calendar3 me-1"></i>Generated on {{ report.created_at.strftime('%B %d, %Y at %I:%M %p') }}
+                        </p>
+                    </div>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-light rounded-circle" type="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-three-dots-vertical"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                            <li>
+                                <button class="dropdown-item small" onclick="openReportModal({{ report.id }})">
+                                    <i class="bi bi-eye text-primary me-2"></i> View Report
+                                </button>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <form action="{{ url_for('nuha_strategic.delete', analysis_id=report.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this strategic report?');">
+                                    <button type="submit" class="dropdown-item small text-danger">
+                                        <i class="bi bi-trash me-2"></i> Delete
+                                    </button>
+                                </form>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
 
+                <div class="report-snippet p-3 bg-light rounded-3 mb-3 text-muted small" style="max-height: 120px; overflow: hidden; line-height: 1.5;">
+                    {{ report.content | replace('#', '') | replace('*', '') | truncate(220) }}
+                </div>
 
+                <div class="d-flex align-items-center justify-content-between mt-auto pt-2 border-top">
+                    <div class="d-flex gap-1">
+                        <span class="badge swot-badge-s rounded-pill px-2 py-1">Strengths</span>
+                        <span class="badge swot-badge-w rounded-pill px-2 py-1">Weaknesses</span>
+                        <span class="badge swot-badge-o rounded-pill px-2 py-1">Opportunities</span>
+                        <span class="badge swot-badge-t rounded-pill px-2 py-1">Threats</span>
+                    </div>
+                    <button class="btn btn-sm btn-primary rounded-2 px-3 fw-semibold" onclick="openReportModal({{ report.id }})">
+                        <i class="bi bi-file-earmark-text me-1"></i>Read Full Report
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="col-12">
+            <div class="card card-custom border-0 shadow-sm p-5 text-center bg-white rounded-4">
+                <div class="mb-3">
+                    <i class="bi bi-journal-text text-muted display-4"></i>
+                </div>
+                <h5 class="fw-bold text-dark">No Strategic Reports Generated Yet</h5>
+                <p class="text-muted small mx-auto" style="max-width: 460px;">
+                    Generate your first AI-driven SWOT and PESTEL recommendation report based on {{ business.name }}'s business profile and competitor catalog.
+                </p>
+                <div>
+                    <button class="btn btn-primary-custom rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#generateModal">
+                        <i class="bi bi-magic me-2"></i>Generate Strategic Report Now
+                    </button>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Modal: Generate Strategic Report -->
+<div class="modal fade" id="generateModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+            <div class="modal-header border-0 pb-0">
+                <div>
+                    <h5 class="modal-title fw-bold text-dark"><i class="bi bi-magic text-primary me-2"></i>Generate Strategic AI Report</h5>
+                    <p class="text-muted small mb-0">Uses Google Gemini API to analyze market positioning & competitors.</p>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('nuha_strategic.generate') }}" method="POST" onsubmit="showLoadingState(this)">
+                <div class="modal-body py-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-secondary">Target Business</label>
+                        <input type="text" class="form-control border-0 bg-light rounded-3" value="{{ business.name }} ({{ business.industry }})" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-secondary">Primary Strategic Focus</label>
+                        <select name="focus_area" class="form-select border-0 bg-light rounded-3" required>
+                            <option value="Comprehensive Growth Strategy">Comprehensive Growth Strategy (SWOT + PESTEL + Marketing)</option>
+                            <option value="Market Expansion & SEO Strategy">Market Expansion & Search Visibility Optimization</option>
+                            <option value="Competitor Defense & Counter-Pricing">Competitor Defense & Price Counter-Strategy</option>
+                            <option value="Product & Niche Innovation">Product & Niche Innovation Strategy</option>
+                            <option value="Customer Retention & Branding">Customer Retention & Brand Positioning</option>
+                        </select>
+                    </div>
+                    <div class="alert alert-info border-0 rounded-3 small mb-0">
+                        <i class="bi bi-info-circle-fill me-2"></i>
+                        Analysis will automatically cross-reference registered competitor data and your business profile.
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light rounded-pill" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" id="generateSubmitBtn" class="btn btn-primary-custom rounded-pill px-4">
+                        <i class="bi bi-cpu me-2"></i>Generate Report
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: View Full Strategic Report -->
+<div class="modal fade" id="viewReportModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+            <div class="modal-header border-0 pb-0">
+                <div>
+                    <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-1 mb-1 fw-bold">Executive Strategic Report</span>
+                    <h4 class="modal-title fw-bold text-dark mb-0" id="viewReportTitle">{{ business.name }} Strategic Analysis</h4>
+                    <p class="text-muted small mb-0" id="viewReportDate"></p>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div id="viewReportContent" class="markdown-body p-3 bg-light rounded-4 border">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <p class="text-muted small mt-2">Loading strategic analysis report...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-outline-secondary rounded-pill" onclick="window.print()">
+                    <i class="bi bi-printer me-2"></i>Print / Save PDF
+                </button>
+                <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Marked JS for Markdown rendering -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+    function showLoadingState(form) {
+        const btn = document.getElementById('generateSubmitBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Analyzing Market via Gemini...';
+    }
+
+    function openReportModal(reportId) {
+        const modal = new bootstrap.Modal(document.getElementById('viewReportModal'));
+        document.getElementById('viewReportContent').innerHTML = `
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="text-muted small mt-2">Fetching report details...</p>
+            </div>
+        `;
+        modal.show();
+
+        fetch(`/nuha/strategic/view/${reportId}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    document.getElementById('viewReportDate').innerText = 'Generated on ' + data.created_at;
+                    if (window.marked) {
+                        document.getElementById('viewReportContent').innerHTML = marked.parse(data.content);
+                    } else {
+                        document.getElementById('viewReportContent').innerText = data.content;
+                    }
+                } else {
+                    document.getElementById('viewReportContent').innerHTML = '<div class="alert alert-danger">Failed to load report content.</div>';
+                }
+            })
+            .catch(err => {
+                document.getElementById('viewReportContent').innerHTML = '<div class="alert alert-danger">Error connecting to server.</div>';
+            });
+    }
+</script>
+{% endblock %}
+--------------------------------------------------
+EXPLANATION:
+- Line 5-32: Custom CSS rules for card elevation animations, SWOT color badges, and markdown typography.
+- Line 35-46: Top header bar with the "Generate New Report" modal trigger button.
+- Line 48-67: Business Context Bar showing current business name, sector, niche, and tracked competitor count.
+- Line 69-150: Dynamic grid displaying report cards:
+    * Displays creation timestamp and action dropdown menu.
+    * Displays text preview snippet.
+    * Shows Strengths, Weaknesses, Opportunities, Threats badges.
+    * Features clean rectangular button: `<button class="btn btn-sm btn-primary rounded-2 px-3 fw-semibold" onclick="openReportModal({{ report.id }})">`.
+- Line 152-193: Generation Modal `#generateModal`: Allows user to choose strategic focus area and submit to `/nuha/strategic/generate`.
+- Line 195-223: View Modal `#viewReportModal`: Interactive scrollable modal displaying the parsed report with Print/PDF export button (`window.print()`).
+- Line 226-262: JavaScript Section:
+    * Loads `marked.min.js` CDN.
+    * `showLoadingState(form)`: Replaces button text with spinner while AI generates the report.
+    * `openReportModal(reportId)`: Calls `fetch('/nuha/strategic/view/' + reportId)` and parses the returned markdown text into HTML using `marked.parse(data.content)`.
 
 ================================================================================
-3. API CALLS & DATA FLOW SUMMARY
-================================================================================
-
---------------------------------------------------------------------------------
-3.1 EXTERNAL AI API INTEGRATIONS
---------------------------------------------------------------------------------
-1. Google Gemini 1.5 Flash API:
-   - Endpoint: `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=...`
-   - Triggered By: `routes/nuha/strategic.py` -> `call_gemini_api(prompt)`
-   - Method: `POST` with JSON payload containing prompt text.
-
-2. Meta Llama 3.1 8B (NVIDIA NIM API):
-   - Endpoint: `https://integrate.api.nvidia.com/v1/chat/completions`
-   - Triggered By: `routes/nuha/strategic.py` -> `call_nvidia_llama_fallback(prompt)`
-   - Method: `POST` with Bearer token authentication header and Chat Completions JSON payload.
-
---------------------------------------------------------------------------------
-3.2 INTERNAL REST JSON APIs & WEB FORM ACTIONS
---------------------------------------------------------------------------------
-
-[Feature 03: To-Do & Quick Notes]
-- Web Index: `GET /nuha/todo/` -> Renders 3-column task/reminder/note dashboard.
-- Form Create: `POST /nuha/todo/create` -> Form submission creating new task/note.
-- Form Update: `POST /nuha/todo/update/<id>` -> Toggles status or updates title/desc.
-- Form Delete: `POST /nuha/todo/delete/<id>` -> Removes entry from SQLite DB.
-- REST List API: `GET /nuha/todo/api/list` -> JSON array grouped by status.
-- REST Create API: `POST /nuha/todo/api/create` -> JSON task creation (HTTP 201).
-- REST Edit API: `POST /api/edit/<id>` or `PUT /api/edit/<id>` -> JSON updates.
-- REST Delete API: `DELETE /nuha/todo/api/delete/<id>` -> JSON deletion.
-
-[Feature 04: Strategic Recommendation Report]
-- Web Index: `GET /nuha/strategic/` -> Renders strategic report dashboard.
-- Form Generate: `POST /nuha/strategic/generate` -> Generates report via AI & redirects.
-- Web View AJAX: `GET /nuha/strategic/view/<id>` -> Returns JSON content for modal reader.
-- Form Delete: `POST /nuha/strategic/delete/<id>` -> Deletes saved report.
-- REST List API: `GET /nuha/strategic/api/list` -> JSON array of saved reports.
-- REST Generate API: `POST /nuha/strategic/api/generate` -> Generates report via JSON payload.
-- REST Get API: `GET /nuha/strategic/api/get/<id>` -> Returns report JSON details.
-- REST Delete API: `DELETE /nuha/strategic/api/delete/<id>` -> Deletes report via REST API.
-
-================================================================================
-END OF CODE EXPLANATION DOCUMENT
+END OF CODE & LINE-BY-LINE EXPLANATION DOCUMENT
 ================================================================================
