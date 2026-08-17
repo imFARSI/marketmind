@@ -1,0 +1,730 @@
+====================================================================================================
+               MARKETMIND — COMPETITOR & INDUSTRY NEWS MONITORING FEATURE
+          STRUCTURED LINE-BY-LINE CODE EXPLANATION & VIVA PREPARATION GUIDE
+====================================================================================================
+Student Name : Rifaat Nuha
+Student ID   : 23301320
+Server Port  : 1320 (Matching last 4 digits of Student ID: 23301320)
+Feature Name : Module 2 — Feature 02: Competitor & Industry News Monitoring (/nuha/news)
+Tech Stack   : Python 3, Flask, Flask-SQLAlchemy, SQLite, NewsAPI.org, Jinja2, Bootstrap 5
+====================================================================================================
+
+====================================================================================================
+TABLE OF CONTENTS
+====================================================================================================
+SECTION 1 : HIGH-LEVEL ARCHITECTURE & API INVOCATION MECHANISM
+SECTION 2 : DATABASE MODEL LINE-BY-LINE EXPLANATION (models.py: Lines 105–114)
+SECTION 3 : BACKEND CONTROLLER LINE-BY-LINE EXPLANATION (routes/nuha/news.py: Lines 1–267)
+SECTION 4 : FRONTEND TEMPLATE LINE-BY-LINE EXPLANATION (templates/nuha/news.html: Lines 1–116)
+SECTION 5 : REUSABLE CARD COMPONENT LINE-BY-LINE EXPLANATION (templates/nuha/_news_card.html: Lines 1–52)
+SECTION 6 : APPLICATION CORE REGISTRATION (app.py: Lines 13 & 47)
+SECTION 7 : TOP VIVA DEFENSE QUESTIONS & PERFECT ANSWERS
+
+====================================================================================================
+SECTION 1: HIGH-LEVEL ARCHITECTURE & API INVOCATION MECHANISM
+====================================================================================================
+
+[1.1 THE FETCH-AND-CACHE ARCHITECTURE]
+- Problem: Calling an external news API on every web page reload introduces high latency (>1 sec),
+  wastes network bandwidth, and quickly hits NewsAPI daily quota limits.
+- Solution: Fetch-and-Cache design.
+  1. The user manually triggers news fetching by clicking "Fetch News" or via REST API.
+  2. The backend sends an HTTP request to NewsAPI.org.
+  3. Received articles are processed, sanitized, and stored locally in SQLite (`NewsArticle` model).
+  4. Subsequent dashboard loads query local SQLite directly (<10ms).
+- Multi-Tenancy: Every article record contains `business_id` to guarantee complete data isolation 
+  between different enterprise accounts.
+
+[1.2 WHEN, WHERE & HOW NewsAPI IS CALLED IN DETAIL]
+
+* WHEN IS IT CALLED?
+  - Trigger 1 (Web Interface): When user submits form in `news.html` -> POST `/nuha/news/fetch`.
+  - Trigger 2 (REST API Client): When an HTTP client sends POST request to `/nuha/news/api/fetch`.
+
+* WHERE IS IT CALLED?
+  - File     : `marketmind/routes/nuha/news.py`
+  - Function : `fetch_and_save_news(query, business_id, competitor_id, page_size)`
+  - Exact Line: Line 34 (`response = requests.get(NEWS_API_URL, params=params, timeout=10)`)
+
+* HOW IS IT CALLED (STEP-BY-STEP)?
+  1. Endpoint URL : `https://newsapi.org/v2/everything`
+  2. HTTP Method  : GET
+  3. Query Parameters (`params` dictionary):
+     - `q`         : Search terms. For Industry News = `f"{niche} {industry}"`. For Competitor = `competitor.name`.
+     - `language`  : `'en'` (Restricts search to English news).
+     - `sortBy`    : `'publishedAt'` (Orders results newest first).
+     - `pageSize`  : `12` (Limits returned items to 12 articles).
+     - `apiKey`    : Reads authentication key from environment variable `NEWS_API_KEY`.
+  4. Timeout      : `timeout=10` (Prevents backend server hanging if NewsAPI drops connection).
+  5. JSON Parsing : `data = response.json()` parses HTTP body into Python dictionary.
+  6. Overwrite    : Deletes existing articles for that category before saving new ones (`.delete()`).
+  7. Parsing Date : Replaces ISO 'Z' with '+00:00' and converts to `datetime` object.
+  8. DB Storage   : Creates `NewsArticle` objects, adds to `db.session`, and runs `db.session.commit()`.
+
+
+====================================================================================================
+SECTION 2: DATABASE MODEL LINE-BY-LINE EXPLANATION (models.py)
+====================================================================================================
+File: `marketmind/models.py` (Lines 105 to 114)
+
+----------------------------------------------------------------------------------------------------
+LINE 105:
+CODE: class NewsArticle(db.Model):
+WHAT IT DOES : Defines the `NewsArticle` ORM model representing the `news_article` table in SQLite.
+EXPLANATION  : Inherits from `db.Model` (Flask-SQLAlchemy base class) so Python objects map to DB rows.
+
+LINE 106:
+CODE:     id = db.Column(db.Integer, primary_key=True)
+WHAT IT DOES : Primary Key column.
+EXPLANATION  : Auto-incrementing unique integer ID identifying each news article in the database.
+
+LINE 107:
+CODE:     title = db.Column(db.String(255), nullable=False)
+WHAT IT DOES : Article headline column.
+EXPLANATION  : Varchar string max 255 characters. `nullable=False` makes headline a mandatory field.
+
+LINE 108:
+CODE:     source = db.Column(db.String(100))
+WHAT IT DOES : News publisher name column.
+EXPLANATION  : Varchar string max 100 characters storing publisher name (e.g., "TechCrunch", "BBC").
+
+LINE 109:
+CODE:     url = db.Column(db.String(500))
+WHAT IT DOES : Article web link column.
+EXPLANATION  : Varchar string max 500 characters storing HTTP link to original publisher website.
+
+LINE 110:
+CODE:     summary = db.Column(db.Text)
+WHAT IT DOES : Article summary snippet column.
+EXPLANATION  : Text data type storing full article description snippet returned by NewsAPI.
+
+LINE 111:
+CODE:     published_at = db.Column(db.DateTime)
+WHAT IT DOES : Publication timestamp column.
+EXPLANATION  : DateTime object storing when the news article was originally published.
+
+LINE 112:
+CODE:     competitor_id = db.Column(db.Integer, db.ForeignKey('competitor.id'))
+WHAT IT DOES : Foreign Key referencing `competitor.id`.
+EXPLANATION  : 
+- NULL (`None`) = Industry News (general market news for the business industry & niche).
+- Non-NULL (`1, 2...`) = Competitor News (news specifically covering that direct competitor).
+
+LINE 113:
+CODE:     business_id = db.Column(db.Integer, db.ForeignKey('business.id'), nullable=False)
+WHAT IT DOES : Foreign Key referencing `business.id`.
+EXPLANATION  : Enforces Multi-Tenancy! Guarantees Business A can only query news tagged with its own ID.
+----------------------------------------------------------------------------------------------------
+
+
+====================================================================================================
+SECTION 3: BACKEND CONTROLLER LINE-BY-LINE EXPLANATION (routes/nuha/news.py)
+====================================================================================================
+File: `marketmind/routes/nuha/news.py` (Lines 1 to 267)
+
+----------------------------------------------------------------------------------------------------
+[BLOCK 3.1: MODULE SETUP, IMPORTS & CONSTANTS (LINES 1 – 16)]
+
+LINES 1–4:
+CODE:
+# ==============================================================================
+# NUHA — Feature 2: Competitor & Industry News Monitoring (NewsAPI)
+# ==============================================================================
+WHAT IT DOES : File header comments.
+
+LINE 5:
+CODE: import os
+WHAT IT DOES : Imports Python standard OS library to read environment configuration variables.
+
+LINE 6:
+CODE: import requests
+WHAT IT DOES : Imports HTTP client library used to send HTTP GET requests to NewsAPI.org.
+
+LINE 7:
+CODE: from datetime import datetime
+WHAT IT DOES : Imports datetime class for parsing timestamp strings into native datetime objects.
+
+LINE 8:
+CODE: from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+WHAT IT DOES : Imports Flask web utilities:
+- Blueprint        : Creates modular route groups.
+- render_template  : Renders Jinja2 HTML templates.
+- request          : Reads URL arguments, form data, and JSON payloads.
+- redirect, url_for: Navigates browser to target routes.
+- flash            : Displays alert messages on HTML pages.
+- jsonify          : Converts Python dicts to JSON HTTP responses.
+
+LINE 9:
+CODE: from flask_login import login_required, current_user
+WHAT IT DOES : Imports user session tools. `@login_required` protects routes; `current_user` accesses logged-in user.
+
+LINE 11:
+CODE: from models import db, NewsArticle, Competitor
+WHAT IT DOES : Imports SQLAlchemy database instance `db` and ORM data models `NewsArticle` and `Competitor`.
+
+LINE 13:
+CODE: news_bp = Blueprint('nuha_news', __name__, url_prefix='/nuha/news')
+WHAT IT DOES : Instantiates Flask Blueprint named `'nuha_news'` with base URL prefix `/nuha/news`.
+
+LINE 15:
+CODE: NEWS_API_KEY = os.getenv('NEWS_API_KEY') or '185e4dc47faf438c8f6d70be51b2dc7e'
+WHAT IT DOES : Reads API key from `.env`. Fallback key provided for demonstration/viva testing.
+
+LINE 16:
+CODE: NEWS_API_URL = 'https://newsapi.org/v2/everything'
+WHAT IT DOES : Defines base REST endpoint URL for NewsAPI search API.
+
+----------------------------------------------------------------------------------------------------
+[BLOCK 3.2: HELPER FUNCTION fetch_and_save_news() (LINES 18 – 78)]
+
+LINE 18:
+CODE: def fetch_and_save_news(query, business_id, competitor_id=None, page_size=12):
+WHAT IT DOES : Helper function signature taking query string, business ID, optional competitor ID, and page limit.
+
+LINES 19–22:
+CODE: """Helper function that calls the NewsAPI, clears old articles of the same type, and saves..."""
+WHAT IT DOES : Docstring explaining function responsibility.
+
+LINES 23–24:
+CODE:
+if not NEWS_API_KEY:
+    return False, "NEWS_API_KEY is missing from .env"
+WHAT IT DOES : Guard clause. If API key is missing, aborts early and returns error message.
+
+LINE 26:
+CODE: try:
+WHAT IT DOES : Opens try block to handle network or database exceptions cleanly.
+
+LINES 27–33:
+CODE:
+params = {
+    'q': query,
+    'language': 'en',
+    'sortBy': 'publishedAt',
+    'pageSize': page_size,
+    'apiKey': NEWS_API_KEY
+}
+WHAT IT DOES : Constructs GET query parameters dictionary for NewsAPI request.
+
+LINE 34:
+CODE: response = requests.get(NEWS_API_URL, params=params, timeout=10)
+WHAT IT DOES : Sends HTTP GET request to NewsAPI with 10-second timeout. (CRITICAL LINE FOR VIVA!)
+
+LINE 35:
+CODE: data = response.json()
+WHAT IT DOES : Parses returned HTTP response JSON body into a Python dictionary.
+
+LINE 37:
+CODE: if data.get('status') == 'ok':
+WHAT IT DOES : Checks if NewsAPI returned success status `'ok'`.
+
+LINE 38:
+CODE: articles_data = data.get('articles', [])
+WHAT IT DOES : Extracts list of article dictionaries from response.
+
+LINES 41–44:
+CODE:
+if competitor_id:
+    NewsArticle.query.filter_by(business_id=business_id, competitor_id=competitor_id).delete()
+else:
+    NewsArticle.query.filter_by(business_id=business_id, competitor_id=None).delete()
+WHAT IT DOES : CACHE INVALIDATION / OVERWRITE STEP. Deletes existing cached articles for that category 
+               before saving new ones to prevent database clutter.
+
+LINE 47:
+CODE: for art in articles_data:
+WHAT IT DOES : Iterates through each article dictionary returned by NewsAPI.
+
+LINES 49–58:
+CODE:
+pub_date = None
+if art.get('publishedAt'):
+    try:
+        pub_str = art.get('publishedAt').replace('Z', '+00:00')
+        pub_date = datetime.fromisoformat(pub_str)
+    except ValueError:
+        pub_date = datetime.utcnow()
+else:
+    pub_date = datetime.utcnow()
+WHAT IT DOES : ISO 8601 Date Parsing. Replaces ISO 'Z' with '+00:00' and converts to native `datetime` object. 
+               Fallback catches formatting errors and defaults to current UTC time.
+
+LINES 60–68:
+CODE:
+new_article = NewsArticle(
+    title=art.get('title', 'No Title')[:255],
+    source=art.get('source', {}).get('name', 'Unknown')[:100],
+    url=art.get('url', '')[:500],
+    summary=art.get('description', ''),
+    published_at=pub_date,
+    competitor_id=competitor_id,
+    business_id=business_id
+)
+WHAT IT DOES : Instantiates `NewsArticle` ORM object. Slices strings (`[:255]`, `[:100]`, `[:500]`) 
+               to enforce DB column size limits and prevent DB buffer overflow crashes.
+
+LINE 69:
+CODE: db.session.add(new_article)
+WHAT IT DOES : Queues new article object in SQLAlchemy session transaction.
+
+LINE 71:
+CODE: db.session.commit()
+WHAT IT DOES : Writes and commits all queued article records into SQLite database file.
+
+LINE 72:
+CODE: return True, f"Successfully fetched and cached {len(articles_data)} articles."
+WHAT IT DOES : Returns success boolean `True` and informative status string.
+
+LINES 73–77:
+CODE:
+else:
+    error_msg = data.get('message', 'Unknown API Error')
+    return False, f"API Error: {error_msg}"
+except Exception as e:
+    return False, f"Request Error: {str(e)}"
+WHAT IT DOES : Exception handling. Catches API errors or network connection failures and returns `(False, error_msg)`.
+
+----------------------------------------------------------------------------------------------------
+[BLOCK 3.3: DASHBOARD VIEW ROUTE index() (LINES 79 – 110)]
+
+LINE 79:
+CODE: @news_bp.route('/')
+WHAT IT DOES : Maps root blueprint route `GET /nuha/news/`.
+
+LINE 80:
+CODE: @login_required
+WHAT IT DOES : Flask-Login decorator ensuring user must be logged in.
+
+LINE 81:
+CODE: def index():
+WHAT IT DOES : View controller function handling dashboard requests.
+
+LINES 82–84:
+CODE:
+if current_user.role not in ['Business Owner', 'Business User']:
+    flash('Access denied. Only Business Owners can access News Monitoring.', 'danger')
+    return redirect(url_for('auth.dashboard'))
+WHAT IT DOES : Role-Based Access Control (RBAC). Restricts view to Business Owners and Users.
+
+LINES 86–89:
+CODE:
+business = current_user.user_business
+if not business:
+    flash('No business workspace found. Please configure your workspace first.', 'warning')
+    return redirect(url_for('nuha_workspace.index'))
+WHAT IT DOES : Gets workspace via `user_business` property. Redirects to workspace config if missing.
+
+LINE 92:
+CODE: industry_articles = NewsArticle.query.filter_by(business_id=business.id, competitor_id=None).order_by(NewsArticle.published_at.desc()).all()
+WHAT IT DOES : Queries database for Industry News (`competitor_id IS NULL`), ordered newest first.
+
+LINE 95:
+CODE: competitor_articles = NewsArticle.query.filter(NewsArticle.business_id == business.id, NewsArticle.competitor_id != None).order_by(NewsArticle.published_at.desc()).all()
+WHAT IT DOES : Queries database for Competitor News (`competitor_id IS NOT NULL`), ordered newest first.
+
+LINE 98:
+CODE: competitors = Competitor.query.filter_by(business_id=business.id).all()
+WHAT IT DOES : Queries list of competitors owned by this business to populate select dropdown.
+
+LINE 101:
+CODE: active_tab = request.args.get('tab', 'industry')
+WHAT IT DOES : Reads `tab` URL parameter (`?tab=competitor`). Defaults to `'industry'`.
+
+LINES 103–110:
+CODE:
+return render_template(
+    'nuha/news.html',
+    business=business,
+    industry_articles=industry_articles,
+    competitor_articles=competitor_articles,
+    competitors=competitors,
+    active_tab=active_tab
+)
+WHAT IT DOES : Renders Jinja2 HTML template `nuha/news.html` passing all retrieved variables.
+
+----------------------------------------------------------------------------------------------------
+[BLOCK 3.4: WEB FORM ACTION ROUTE fetch() (LINES 112 – 163)]
+
+LINE 112:
+CODE: @news_bp.route('/fetch', methods=['POST'])
+WHAT IT DOES : Maps route `POST /nuha/news/fetch` handling HTML form submissions.
+
+LINE 113:
+CODE: @login_required
+WHAT IT DOES : Enforces login session.
+
+LINE 114:
+CODE: def fetch():
+WHAT IT DOES : Form action handler function.
+
+LINES 115–122:
+CODE: (Role check and workspace validation)
+WHAT IT DOES : Security checks verifying permissions and workspace setup.
+
+LINE 124:
+CODE: category = request.form.get('category')
+WHAT IT DOES : Reads hidden HTML form input `'category'` (`'industry'` or `'competitor'`).
+
+LINES 126–138:
+CODE:
+if category == 'industry':
+    industry = business.industry or ''
+    niche = business.niche or ''
+    query = f"{niche} {industry}".strip()
+    if not query:
+        query = "business"
+    success, msg = fetch_and_save_news(query, business.id, competitor_id=None)
+    if success:
+        flash(msg, 'success')
+    else:
+        flash(msg, 'danger')
+WHAT IT DOES : Industry News Fetch Branch. Combines `niche` and `industry` into search query 
+               (e.g. "Market Intelligence SaaS Software & AI"). Calls `fetch_and_save_news()` and flashes UI alert.
+
+LINES 140–157:
+CODE:
+elif category == 'competitor':
+    competitor_id = request.form.get('competitor_id')
+    if not competitor_id:
+        flash('Please select a competitor to fetch news for.', 'warning')
+        return redirect(url_for('nuha_news.index'))
+    competitor = Competitor.query.filter_by(id=competitor_id, business_id=business.id).first()
+    if not competitor:
+        flash('Competitor not found.', 'danger')
+        return redirect(url_for('nuha_news.index'))
+    query = competitor.name
+    success, msg = fetch_and_save_news(query, business.id, competitor_id=competitor.id)
+    if success:
+        flash(msg, 'success')
+    else:
+        flash(msg, 'danger')
+WHAT IT DOES : Competitor News Fetch Branch. Extracts `competitor_id`, verifies ownership, uses `competitor.name` 
+               as query, calls `fetch_and_save_news()`, and flashes outcome banner.
+
+LINES 158–162:
+CODE:
+else:
+    flash('Invalid category selected.', 'danger')
+    category = 'industry'
+return redirect(url_for('nuha_news.index', tab=category))
+WHAT IT DOES : Redirects browser back to `/nuha/news/?tab=category` retaining current tab view.
+
+----------------------------------------------------------------------------------------------------
+[BLOCK 3.5: REST API GET ROUTE api_articles() (LINES 168 – 210)]
+
+LINE 168:
+CODE: @news_bp.route('/api/articles', methods=['GET'])
+WHAT IT DOES : Maps REST API endpoint `GET /nuha/news/api/articles`.
+
+LINES 172–177:
+CODE: (RBAC & Workspace checks)
+WHAT IT DOES : Security checks returning HTTP 403 Forbidden or 404 Not Found JSON on failure.
+
+LINES 179–180:
+CODE:
+industry_articles = NewsArticle.query.filter_by(business_id=business.id, competitor_id=None).order_by(NewsArticle.published_at.desc()).all()
+competitor_articles = NewsArticle.query.filter(NewsArticle.business_id == business.id, NewsArticle.competitor_id != None).order_by(NewsArticle.published_at.desc()).all()
+WHAT IT DOES : Queries industry and competitor articles from database.
+
+LINES 182–200:
+CODE:
+industry_data = [{ 'id': a.id, 'title': a.title, ... 'published_at': a.published_at.isoformat() if a.published_at else None } for a in industry_articles]
+competitor_data = [{ 'id': a.id, 'title': a.title, ... } for a in competitor_articles]
+WHAT IT DOES : Serializes `NewsArticle` ORM models into JSON dictionaries. Converts dates to ISO strings.
+
+LINES 202–210:
+CODE:
+all_articles = industry_data + competitor_data
+return jsonify({ 'status': 'success', 'count': len(all_articles), 'industry_articles': industry_data, 'competitor_articles': competitor_data, 'articles': all_articles })
+WHAT IT DOES : Merges datasets and returns HTTP 200 OK JSON response.
+
+----------------------------------------------------------------------------------------------------
+[BLOCK 3.6: REST API POST ROUTE api_fetch() (LINES 212 – 266)]
+
+LINE 212:
+CODE: @news_bp.route('/api/fetch', methods=['POST'])
+WHAT IT DOES : Maps REST API endpoint `POST /nuha/news/api/fetch`.
+
+LINE 223:
+CODE: payload = request.get_json(silent=True) or request.form
+WHAT IT DOES : Flexible Payload Reader. Reads JSON body from Postman API calls or form data from web calls.
+
+LINE 224:
+CODE: category = payload.get('category')
+WHAT IT DOES : Extracts category parameter (`'industry'` or `'competitor'`).
+
+LINES 226–242:
+CODE:
+if category == 'industry':
+    ...
+    success, msg = fetch_and_save_news(query, business.id, competitor_id=None)
+    if success:
+        count = NewsArticle.query.filter_by(business_id=business.id, competitor_id=None).count()
+        return jsonify({'status': 'success', 'message': msg, 'articles_count': count})
+    else:
+        return jsonify({'status': 'error', 'message': msg}), 400
+WHAT IT DOES : Industry API Branch. Fetches news and returns HTTP 200 OK with count or 400 Bad Request JSON.
+
+LINES 244–265:
+CODE:
+elif category == 'competitor':
+    competitor_id = payload.get('competitor_id')
+    ...
+    success, msg = fetch_and_save_news(query, business.id, competitor_id=competitor.id)
+    if success:
+        count = NewsArticle.query.filter_by(business_id=business.id, competitor_id=competitor.id).count()
+        return jsonify({'status': 'success', 'message': msg, 'articles_count': count})
+    else:
+        return jsonify({'status': 'error', 'message': msg}), 400
+else:
+    return jsonify({'status': 'error', 'message': 'Invalid category selected. Use "industry" or "competitor".'}), 400
+WHAT IT DOES : Competitor API Branch. Validates competitor ID, fetches news, and returns HTTP 200/400 JSON.
+----------------------------------------------------------------------------------------------------
+
+
+====================================================================================================
+SECTION 4: FRONTEND TEMPLATE LINE-BY-LINE EXPLANATION (templates/nuha/news.html)
+====================================================================================================
+File: `marketmind/templates/nuha/news.html` (Lines 1 to 116)
+
+----------------------------------------------------------------------------------------------------
+LINE 1:
+CODE: {% extends 'layout.html' %}
+WHAT IT DOES : Inherits base layout template (`layout.html`), including navbar, sidebar, and styles.
+
+LINE 3:
+CODE: {% block title %}News Monitor — MarketMind{% endblock %}
+WHAT IT DOES : Sets HTML page title shown in browser tab.
+
+LINE 5:
+CODE: {% block content %}
+WHAT IT DOES : Opens main content block replacing `{% block content %}` in layout.html.
+
+LINES 7–15:
+CODE:
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1">News Monitor (Cached)</h2>
+        <p class="text-muted small mb-0">
+            View cached news for <strong>{{ business.industry }}{% if business.niche %} — {{ business.niche }}{% endif %}</strong> 
+            and your competitors. Fetch manually to save API limits.
+        </p>
+    </div>
+</div>
+WHAT IT DOES : Page header section displaying title and dynamic workspace metadata (`business.industry` & `niche`).
+
+LINES 18–29:
+CODE:
+<ul class="nav nav-tabs mb-4 border-0" id="newsTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link {% if active_tab == 'industry' %}active{% endif %} ..." id="industry-tab" data-bs-toggle="tab" data-bs-target="#industry" type="button" role="tab">
+            <i class="bi bi-graph-up-arrow text-primary me-2"></i>Industry News
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link {% if active_tab == 'competitor' %}active{% endif %} ..." id="competitor-tab" data-bs-toggle="tab" data-bs-target="#competitor" type="button" role="tab">
+            <i class="bi bi-buildings text-danger me-2"></i>Competitor News
+        </button>
+    </li>
+</ul>
+WHAT IT DOES : Bootstrap 5 Nav Tabs. Line 20 applies CSS class `active` if `active_tab == 'industry'`. Line 25 applies `active` if `active_tab == 'competitor'`.
+
+LINE 31:
+CODE: <div class="tab-content" id="newsTabsContent">
+WHAT IT DOES : Container wrapping tab contents.
+
+LINES 36–70 (TAB 1 PANE: INDUSTRY NEWS):
+CODE:
+<div class="tab-pane fade {% if active_tab == 'industry' %}show active{% endif %}" id="industry" role="tabpanel">
+    ...
+    <form action="{{ url_for('nuha_news.fetch') }}" method="POST">
+        <input type="hidden" name="category" value="industry">
+        <button type="submit" class="btn btn-primary-custom px-4 shadow-sm rounded-pill d-flex align-items-center gap-2">
+            <i class="bi bi-cloud-download"></i> Fetch Latest Industry News
+        </button>
+    </form>
+    ...
+    <div class="row g-3">
+        {% if industry_articles %}
+            {% for article in industry_articles %}
+            <div class="col-md-6 col-lg-3">
+                {% include 'nuha/_news_card.html' %}
+            </div>
+            {% endfor %}
+        {% else %}
+            <!-- Empty State Card -->
+        {% endif %}
+    </div>
+</div>
+WHAT IT DOES : Renders Tab 1 pane. Form posts `category=industry` to `/nuha/news/fetch`. Grid loops 
+               through `industry_articles` and embeds `_news_card.html` for each item. Shows empty state if list is empty.
+
+LINES 73–113 (TAB 2 PANE: COMPETITOR NEWS):
+CODE:
+<div class="tab-pane fade {% if active_tab == 'competitor' %}show active{% endif %}" id="competitor" role="tabpanel">
+    ...
+    <form action="{{ url_for('nuha_news.fetch') }}" method="POST" class="d-flex gap-2">
+        <input type="hidden" name="category" value="competitor">
+        <select name="competitor_id" class="form-select border shadow-sm rounded-pill px-4" required>
+            <option value="" disabled selected>-- Select a Competitor --</option>
+            {% for comp in competitors %}
+                <option value="{{ comp.id }}">{{ comp.name }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-danger px-4 shadow-sm rounded-pill d-flex align-items-center gap-2 text-nowrap">
+            <i class="bi bi-cloud-download"></i> Fetch News
+        </button>
+    </form>
+    ...
+    <div class="row g-3">
+        {% if competitor_articles %}
+            {% for article in competitor_articles %}
+            <div class="col-md-6 col-lg-3">
+                {% include 'nuha/_news_card.html' %}
+            </div>
+            {% endfor %}
+        {% else %}
+            <!-- Empty State Card -->
+        {% endif %}
+    </div>
+</div>
+WHAT IT DOES : Renders Tab 2 pane. Contains competitor `<select>` dropdown populated dynamically by loop 
+               `{% for comp in competitors %}`. Submits `category=competitor` and `competitor_id`. Embeds `_news_card.html` per item.
+
+LINE 115:
+CODE: {% endblock %}
+WHAT IT DOES : Closes content block.
+----------------------------------------------------------------------------------------------------
+
+
+====================================================================================================
+SECTION 5: REUSABLE CARD COMPONENT LINE-BY-LINE EXPLANATION (templates/nuha/_news_card.html)
+====================================================================================================
+File: `marketmind/templates/nuha/_news_card.html` (Lines 1 to 52)
+
+----------------------------------------------------------------------------------------------------
+LINES 1–5:
+CODE: <!-- Reusable News Article Card Partial ... Variable expected: article -->
+WHAT IT DOES : Documentation comment explaining template partial purpose.
+
+LINE 6:
+CODE: <div class="card card-custom bg-white shadow-sm border-0 h-100 d-flex flex-column" style="border-radius: 12px; overflow: hidden;">
+WHAT IT DOES : Outer card container. `h-100` and `d-flex flex-column` enable flexbox layout so cards stretch equally in grid rows.
+
+LINES 8–14:
+CODE:
+{% if article.urlToImage %}
+<img src="{{ article.urlToImage }}"
+     alt="{{ article.title }}"
+     class="card-img-top"
+     style="height: 160px; object-fit: cover;"
+     onerror="this.style.display='none'">
+{% endif %}
+WHAT IT DOES : Renders article banner image. 
+               `onerror="this.style.display='none'"` IS A JAVASCRIPT ERROR HANDLER! If external image link is broken or 404s, JS hides image tag cleanly.
+
+LINE 16:
+CODE: <div class="card-body d-flex flex-column p-3">
+WHAT IT DOES : Card inner body flexbox container with padding `p-3`.
+
+LINES 18–27:
+CODE:
+<div class="d-flex align-items-center justify-content-between mb-2">
+    <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-2 py-1 fw-semibold small">
+        {{ article.source.name if article.source else 'Unknown' }}
+    </span>
+    <span class="text-muted" style="font-size: 0.75rem;">
+        {% if article.publishedAt %}
+            {{ article.publishedAt[:10] }}
+        {% endif %}
+    </span>
+</div>
+WHAT IT DOES : Renders publisher blue pill badge (`article.source.name`) and publication date trimmed to YYYY-MM-DD (`[:10]`).
+
+LINES 29–32:
+CODE:
+<h6 class="fw-bold text-dark mb-2 lh-sm" style="font-size: 0.9rem;">
+    {{ article.title | truncate(90) if article.title else 'No title' }}
+</h6>
+WHAT IT DOES : Renders article headline. Jinja filter `| truncate(90)` cuts off titles longer than 90 chars appending `...`.
+
+LINES 34–41:
+CODE:
+{% if article.description %}
+<p class="text-muted small mb-3 flex-grow-1" style="font-size: 0.8rem; line-height: 1.45;">
+    {{ article.description | truncate(110) }}
+</p>
+{% else %}
+<div class="flex-grow-1"></div>
+{% endif %}
+WHAT IT DOES : Renders description snippet truncated to 110 chars (`| truncate(110)`). 
+               `flex-grow-1` fills vertical space so all bottom buttons line up evenly across grid rows!
+
+LINES 43–49:
+CODE:
+{% if article.url %}
+<a href="{{ article.url }}" target="_blank" rel="noopener noreferrer"
+   class="btn btn-outline-primary btn-sm rounded-pill px-3 mt-auto align-self-start">
+    Read More <i class="bi bi-box-arrow-up-right ms-1" style="font-size: 0.7rem;"></i>
+</a>
+{% endif %}
+WHAT IT DOES : Renders "Read More" button linking to original news URL.
+               - `target="_blank"`: Opens news article in new browser tab.
+               - `rel="noopener noreferrer"`: Security best practice protecting against reverse tabnabbing attacks.
+               - `mt-auto`: Pushes button to bottom of card via Flexbox margin-top auto.
+
+LINES 50–51:
+CODE: </div></div>
+WHAT IT DOES : Closes card-body and card container divs.
+----------------------------------------------------------------------------------------------------
+
+
+====================================================================================================
+SECTION 6: APPLICATION CORE REGISTRATION (app.py)
+====================================================================================================
+File: `marketmind/app.py`
+
+----------------------------------------------------------------------------------------------------
+LINE 13:
+CODE: from routes.nuha.news import news_bp
+WHAT IT DOES : Imports `news_bp` Blueprint from `routes/nuha/news.py`.
+
+LINE 47:
+CODE: app.register_blueprint(news_bp)
+WHAT IT DOES : Registers blueprint with core Flask application instance.
+
+LINE 55:
+CODE: port = int(os.getenv('PORT', 1320))
+WHAT IT DOES : Sets server port to 1320 (matching Student ID 23301320).
+----------------------------------------------------------------------------------------------------
+
+
+====================================================================================================
+SECTION 7: TOP VIVA DEFENSE QUESTIONS & PERFECT ANSWERS
+====================================================================================================
+
+Q1: Why did you implement a cached database model (`NewsArticle`) instead of making live NewsAPI calls on every page load?
+A1: Three main reasons:
+    1. Performance: Querying local SQLite database takes <10ms, whereas external API requests take 500ms–2000ms.
+    2. API Limits & Cost: Free tier API keys have strict daily request quotas. Caching minimizes API usage.
+    3. Reliability: Users can view cached news even if NewsAPI is offline or rate-limited.
+
+Q2: Where and how is the external NewsAPI called in `news.py`?
+A2: In `routes/nuha/news.py`, inside the `fetch_and_save_news()` function at Line 34 using `requests.get()`. 
+    It passes params: `q` (query), `language='en'`, `sortBy='publishedAt'`, `pageSize=12`, and `apiKey`.
+
+Q3: How do you differentiate Industry News from Competitor News in the database?
+A3: Using the `competitor_id` Foreign Key in the `NewsArticle` table.
+    - If `competitor_id IS NULL`: It is Industry News (queried using business niche & industry keywords).
+    - If `competitor_id IS NOT NULL`: It is Competitor News (queried using that competitor's name).
+
+Q4: What happens during cache invalidation when a user clicks "Fetch News"?
+A4: Lines 41-44 in `news.py` execute `NewsArticle.query.filter_by(...).delete()`. 
+    This deletes old cached records for that specific category before saving newly fetched articles, 
+    preventing duplicate accumulation in SQLite.
+
+Q5: Why are `news.html` and `_news_card.html` split into separate files?
+A5: To adhere to the DRY (Don't Repeat Yourself) principle. Both Industry News and Competitor News 
+    tabs render article cards in a grid. Writing the card HTML once in `_news_card.html` allows us to 
+    reusably embed it using `{% include 'nuha/_news_card.html' %}` inside both tab loops.
+====================================================================================================

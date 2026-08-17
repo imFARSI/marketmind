@@ -1,0 +1,192 @@
+{
+	"info": {
+		"_postman_id": "a67e1320-nuha-4710-9821-marketmind03",
+		"name": "MarketMind - Nuha APIs (Assignment 03)",
+		"description": "Postman Collection for CSE471 Assignment 03: Rifaat Nuha (Student ID: 23301320)\nFeature 1: Business Workspace Configuration\nFeature 2: Competitor & Industry News Monitoring",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://127.0.0.1:1320",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "0. Authentication",
+			"item": [
+				{
+					"name": "User Login (Business Owner)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"nuha.owner@example.com\",\n  \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"login"
+							]
+						},
+						"description": "Logs in as a Business Owner to obtain session authentication cookie for subsequent API calls."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Feature 1 - Business Workspace Configuration",
+			"item": [
+				{
+					"name": "1. Get Workspace Details",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/nuha/workspace/api/details",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"nuha",
+								"workspace",
+								"api",
+								"details"
+							]
+						},
+						"description": "Retrieves business workspace configuration details and field agent count for the authenticated Business Owner."
+					},
+					"response": []
+				},
+				{
+					"name": "2. Update Workspace Configuration",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Nuha Global Intelligence Ltd.\",\n  \"industry\": \"Software & AI Solutions\",\n  \"niche\": \"AI SaaS & Analytics\",\n  \"contact_email\": \"contact@nuhaglobal.com\",\n  \"company_size\": \"50-100\",\n  \"founded_year\": \"2023\",\n  \"headquarters\": \"Dhaka, Bangladesh\",\n  \"description\": \"Leading enterprise market intelligence and competitor news monitoring platform.\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/nuha/workspace/api/update",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"nuha",
+								"workspace",
+								"api",
+								"update"
+							]
+						},
+						"description": "Updates workspace attributes (name, industry, niche, contact email, company size, founded year, headquarters, description) in SQLite DB."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Feature 2 - Competitor & Industry News Monitoring",
+			"item": [
+				{
+					"name": "1. Fetch & Cache Industry News (NewsAPI)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"category\": \"industry\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/nuha/news/api/fetch",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"nuha",
+								"news",
+								"api",
+								"fetch"
+							]
+						},
+						"description": "Triggers live NewsAPI request based on industry and niche keywords, caching returned articles into database."
+					},
+					"response": []
+				},
+				{
+					"name": "2. Get Cached News Articles",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/nuha/news/api/articles",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"nuha",
+								"news",
+								"api",
+								"articles"
+							]
+						},
+						"description": "Returns JSON array of cached industry and competitor news articles stored in SQLite DB."
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}
