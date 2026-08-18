@@ -84,6 +84,7 @@ def add_task():
     flash(f'Field task "{title}" assigned successfully!', 'success')
     return redirect(url_for('salman_field_tasks.index'))
 
+# FIELD AGENT PERSONAL PORTAL
 @field_tasks_bp.route('/my-tasks')
 @login_required
 def my_tasks():
@@ -98,6 +99,7 @@ def my_tasks():
         competitor_map=competitor_map
     )
 
+# UPDATE TASK STATUS & ONSITE NOTES HANDLER
 @field_tasks_bp.route('/update-status/<int:id>', methods=['POST'])
 @login_required
 def update_status(id):
