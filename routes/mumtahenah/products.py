@@ -158,12 +158,12 @@ def add_url():
     currency = request.form.get('currency') or scraped['currency']
     description = request.form.get('description') or scraped['description']
 
-    # Save Product & Price
+    # Save Product & Price (Store actual imported URL in price.source)
     product = Product(name=name, category=category, description=description, competitor_id=comp_id)
     db.session.add(product)
     db.session.flush()
 
-    price = Price(product_id=product.id, amount=amount, currency=currency, source='URL Link Import')
+    price = Price(product_id=product.id, amount=amount, currency=currency, source=url)
     db.session.add(price)
     db.session.commit()
 

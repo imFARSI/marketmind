@@ -1,0 +1,140 @@
+{% extends 'layout.html' %}
+
+{% block title %}On-Site Findings & Email Alert — MarketMind{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+
+    <!-- PAGE HEADER -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h3 class="fw-bold mb-0 text-dark"><i class="bi bi-journal-check text-success me-2"></i>Agents On-Site
+                Findings & Email Alert</h3>
+            <small class="text-muted">Submit field research audit observations and dispatch automated email alerts via
+                Resend API</small>
+        </div>
+    </div>
+
+    <!-- SUMMARY KPI STATS -->
+    <div class="row g-2 mb-3">
+        <div class="col-6 col-md-4">
+            <div class="card p-2 text-center border-0 shadow-sm rounded-3">
+                <small class="text-muted text-uppercase fw-bold">Total Tasks</small>
+                <h4 class="fw-bold text-primary mb-0">{{ kpis.total_assigned }}</h4>
+            </div>
+        </div>
+        <div class="col-6 col-md-4">
+            <div class="card p-2 text-center border-0 shadow-sm rounded-3">
+                <small class="text-muted text-uppercase fw-bold">Completed Audits</small>
+                <h4 class="fw-bold text-success mb-0">{{ kpis.total_completed }}</h4>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="card p-2 text-center border-0 shadow-sm rounded-3">
+                <small class="text-muted text-uppercase fw-bold">Pending Tasks</small>
+                <h4 class="fw-bold text-warning mb-0">{{ kpis.pending_count }}</h4>
+            </div>
+        </div>
+    </div>
+
+    <!-- SUBMIT ON-SITE FINDINGS FORM CARD -->
+    <div class="card p-4 border-0 shadow-sm rounded-3 mb-4 bg-white">
+        <h5 class="fw-bold mb-1 text-dark"><i class="bi bi-pencil-square text-primary me-2"></i>Submit Field Research
+            Findings</h5>
+        <p class="text-muted small mb-3">Select your assigned field task, enter your observations, and click Submit to
+            automatically record notes and trigger a Resend API email notification to the business owner.</p>
+
+        <form method="POST" action="{{ url_for('mumtahenah_findings.submit') }}">
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Assigned Field Task *</label>
+                    <select name="task_id" class="form-select" required>
+                        {% for t in tasks %}
+                        <option value="{{ t.id }}" {% if t.status=='Completed' %}disabled{% endif %}>
+                            {{ t.title }} — Status: {{ t.status }}
+                        </option>
+                        {% else %}
+                        <option value="">No assigned tasks available</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Observation Category *</label>
+                    <select name="category" class="form-select" required>
+                        <option value="Price Change">Price Change / Discount Audit</option>
+                        <option value="New Product Launch">New Competitor Product Launch</option>
+                        <option value="Promotional Strategy">Promotional & Banner Strategy</option>
+                        <option value="Store Environment Audit">On-Site Store Environment Audit</option>
+                        <option value="General Audit">General Market Observation</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Field Audit Notes & Findings *</label>
+                <textarea name="notes" class="form-control" rows="3"
+                    placeholder="Describe on-site findings, observed product prices, promotional offers, or shelf placement details..."
+                    required></textarea>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center">
+                <span class="badge bg-secondary-subtle text-secondary py-2 px-3 small">
+                    <i class="bi bi-envelope-paper me-1"></i> Resend API Email Alert: Enabled
+                </span>
+                <button type="submit" class="btn btn-success rounded-pill px-4 fw-bold">
+                    <i class="bi bi-send-check me-1"></i> Submit Findings & Dispatch Email Alert
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- SUBMITTED FINDINGS HISTORY FEED -->
+    <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+        <div class="card-header bg-light py-2 px-3 fw-bold text-dark small text-uppercase">
+            <i class="bi bi-card-checklist me-2"></i>Completed On-Site Audit Findings Feed
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light small text-uppercase">
+                    <tr>
+                        <th class="ps-3">Field Agent</th>
+                        <th>Task Title</th>
+                        <th>Target Competitor</th>
+                        <th>On-Site Observation Notes</th>
+                        <th>Status & Email Alert</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if findings %}
+                    {% for f in findings %}
+                    <tr>
+                        <td class="ps-3">
+                            <span class="fw-bold text-dark">{{ f.agent_name }}</span>
+                            <br /><small class="text-muted">{{ f.submitted_at }}</small>
+                        </td>
+                        <td><span class="badge bg-primary-subtle text-primary">{{ f.task_title }}</span></td>
+                        <td class="fw-semibold">{{ f.competitor_name }}</td>
+                        <td><small class="text-dark">{{ f.notes }}</small></td>
+                        <td>
+                            <span class="badge bg-success-subtle text-success fw-bold me-1">
+                                <i class="bi bi-check-circle-fill me-1"></i>Completed
+                            </span>
+                            <span class="badge bg-info-subtle text-info">
+                                <i class="bi bi-envelope-check me-1"></i>Resend Alerted
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center py-3 text-muted">No completed on-site findings submitted yet.
+                            Submit observations above to record findings and dispatch automated email alerts!</td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

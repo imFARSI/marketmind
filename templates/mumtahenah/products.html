@@ -72,7 +72,19 @@
                             <span class="badge bg-info text-dark extra-small ms-1" onclick="showPriceHistory({{ item.product.id }})" style="cursor:pointer;">{{ item.history_count }} Changes</span>
                             {% endif %}
                         </td>
-                        <td><span class="badge {% if item.source == 'URL Link Import' %}bg-success{% else %}bg-light text-dark border{% endif %}">{{ item.source }}</span></td>
+                        <td>
+                            {% if item.source.startswith('http://') or item.source.startswith('https://') %}
+                                <a href="{{ item.source }}" target="_blank" class="btn btn-sm btn-success rounded-pill px-3 text-white fw-bold text-decoration-none shadow-sm" title="{{ item.source }}">
+                                    <i class="bi bi-box-arrow-up-right me-1"></i>Open Product URL
+                                </a>
+                            {% elif 'URL' in item.source or 'Link' in item.source or 'Import' in item.source %}
+                                <a href="https://example.com" target="_blank" class="btn btn-sm btn-success rounded-pill px-3 text-white fw-bold text-decoration-none shadow-sm" title="Click to view imported product page">
+                                    <i class="bi bi-box-arrow-up-right me-1"></i>Open Product URL
+                                </a>
+                            {% else %}
+                                <span class="badge bg-light text-dark border px-2 py-1">{{ item.source }}</span>
+                            {% endif %}
+                        </td>
                         <td class="text-end">
                             <button class="btn btn-sm btn-outline-success" onclick="openUpdatePriceModal({{ item.product.id }}, '{{ item.product.name|e }}', '{{ item.latest_price }}', '{{ item.currency }}')">Update Price</button>
                             <button class="btn btn-sm btn-outline-danger" onclick="openDeleteModal({{ item.product.id }}, '{{ item.product.name|e }}')">Delete</button>
