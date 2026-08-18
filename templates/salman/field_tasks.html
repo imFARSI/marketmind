@@ -81,7 +81,6 @@
                     <th scope="col" class="py-3">Task Title & Target</th>
                     <th scope="col" class="py-3">Assigned Agent</th>
                     <th scope="col" class="py-3">Status</th>
-                    <th scope="col" class="py-3">Agent GPS Location</th>
                     <th scope="col" class="py-3 text-end">Actions</th>
                 </tr>
             </thead>
@@ -107,9 +106,6 @@
                         {% else %}
                         <span class="badge bg-success-subtle text-success-emphasis rounded-pill px-3 py-1 fw-medium">Completed</span>
                         {% endif %}
-                    </td>
-                    <td>
-                        <span class="badge bg-light text-muted border px-2.5 py-1 font-monospace"><i class="bi bi-geo-alt-fill text-danger me-1"></i>Member 3 GPS Stream</span>
                     </td>
                     <td class="text-end">
                         <button class="btn btn-light btn-sm text-primary rounded-circle me-1" data-bs-toggle="modal" data-bs-target="#viewTaskModal{{ task.id }}" title="View Task Details">

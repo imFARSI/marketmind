@@ -2,7 +2,7 @@
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
-from models import db, FieldTask, TaskLocationLog, Competitor, Business, User
+from models import db, FieldTask, Competitor, Business, User
 
 field_tasks_bp = Blueprint('salman_field_tasks', __name__, url_prefix='/salman/field-tasks')
 
