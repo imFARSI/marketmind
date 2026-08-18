@@ -51,7 +51,7 @@
 | Member | Feature | Description |
 |--------|---------|-------------|
 | **Salman Farsi** | Field Research Task Assignment | Assign store research tasks to enrolled field agents with status tracking. |
-| **Salman Farsi** | Meeting Management & Business Expense Management | Single-page hub to create, edit, delete, and manage business meetings and calculate business expenses. |
+| **Salman Farsi** | Business expense Management: Log Revenue & Expenses Profit Calculation & Chart |
 | **Rifaat Nuha** | To-Do & Quick Notes | Users can create, edit, delete, and view tasks, reminders, or quick notes to complete later. |
 | **Rifaat Nuha** | Strategic Recommendation Report | Generate own business SWOT & PESTEL by reasoning business model vs competitors + marketing strategy and next move (Gemini API). |
 | **Mumtahenah** | Competitor Discovery & Search Visibility Tracker | Track search visibility and discover competitors using own business model details (Google Custom Search API). |

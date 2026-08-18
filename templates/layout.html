@@ -288,7 +288,7 @@
                     <i class="bi bi-card-checklist"></i> Field Tasks
                 </a>
                 <a href="{{ url_for('salman_finance_meetings.index') }}" class="nav-link {% if 'salman_finance_meetings' in request.endpoint %}active{% endif %}">
-                    <i class="bi bi-calculator"></i> Finance & Meetings
+                    <i class="bi bi-calculator"></i> Business Expense & Finance
                 </a>
                 <a href="{{ url_for('salman_ai_chat.index') }}" class="nav-link {% if 'salman_ai_chat' in request.endpoint %}active{% endif %}">
                     <i class="bi bi-robot"></i> AI Companion
@@ -301,6 +301,9 @@
                 </a>
                 <a href="{{ url_for('nuha_todo.index') }}" class="nav-link {% if 'nuha_todo' in request.endpoint %}active{% endif %}">
                     <i class="bi bi-check2-square"></i> To-Do & Notes
+                </a>
+                <a href="{{ url_for('nuha_strategic.index') }}" class="nav-link {% if 'nuha_strategic' in request.endpoint %}active{% endif %}">
+                    <i class="bi bi-graph-up-arrow"></i> Strategic Report
                 </a>
                 <a href="{{ url_for('mumtahenah_products.index') }}" class="nav-link {% if 'mumtahenah_products' in request.endpoint %}active{% endif %}">
                     <i class="bi bi-box-seam"></i> Product Catalog

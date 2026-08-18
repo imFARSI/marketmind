@@ -12,6 +12,7 @@ from routes.salman.finance_meetings import finance_meetings_bp
 from routes.nuha.workspace import workspace_bp
 from routes.nuha.news import news_bp
 from routes.nuha.todo import todo_bp
+from routes.nuha.strategic import strategic_bp
 from routes.mumtahenah.products import products_bp
 from routes.mumtahenah.livelocationtrack import tracking_bp
 from routes.mumtahenah.discovery import discovery_bp
@@ -19,9 +20,14 @@ from routes.mumtahenah.findings import findings_bp
 
 load_dotenv()
 
+basedir = os.path.abspath(os.path.dirname(__file__))
+db_dir = os.path.join(basedir, 'instance')
+os.makedirs(db_dir, exist_ok=True)
+db_path = os.path.join(db_dir, 'marketmind.db').replace('\\', '/')
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'default_secret_key')
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///marketmind.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
@@ -44,6 +50,7 @@ app.register_blueprint(finance_meetings_bp)
 app.register_blueprint(workspace_bp)
 app.register_blueprint(news_bp)
 app.register_blueprint(todo_bp)
+app.register_blueprint(strategic_bp)
 app.register_blueprint(products_bp)
 app.register_blueprint(tracking_bp)
 app.register_blueprint(discovery_bp)

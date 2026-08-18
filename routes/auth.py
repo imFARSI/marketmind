@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_user, logout_user, login_required, current_user
 from models import db, User, Business
 import secrets
@@ -16,25 +16,47 @@ def index():
 @auth_bp.route('/auth/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        email = request.form.get('email', '').strip().lower()
-        password = request.form.get('password', '').strip()
+        data = request.get_json(silent=True) or request.form
+        email = data.get('email', '').strip().lower()
+        password = data.get('password', '').strip()
+
+        # Check if request expects JSON
+        wants_json = request.is_json or request.headers.get('Accept') == 'application/json'
 
         # Strict Email Format Validation on Login
         if not email or not re.match(EMAIL_REGEX, email):
+            if wants_json:
+                return jsonify({'status': 'error', 'message': 'Please enter a valid email address (e.g. name@company.com).'}), 400
             flash('Please enter a valid email address (e.g. name@company.com).', 'danger')
             return redirect(url_for('auth.login'))
 
         user = User.query.filter_by(email=email).first()
         if not user:
+            if wants_json:
+                return jsonify({'status': 'error', 'message': 'No account found with this email address.'}), 404
             flash('No account found with this email address.', 'danger')
             return redirect(url_for('auth.login'))
         from werkzeug.security import check_password_hash
-        is_valid_password = check_password_hash(user.password, password) if user.password.startswith('pbkdf2:') else (user.password == password)
+        is_valid_password = check_password_hash(user.password, password) if (user.password and user.password.startswith('pbkdf2:')) else (user.password == password)
         if not is_valid_password:
+            if wants_json:
+                return jsonify({'status': 'error', 'message': 'Incorrect password. Please try again.'}), 401
             flash('Incorrect password. Please try again.', 'danger')
             return redirect(url_for('auth.login'))
         else:
             login_user(user)
+            if wants_json:
+                return jsonify({
+                    'status': 'success',
+                    'message': 'Logged in successfully.',
+                    'user': {
+                        'id': user.id,
+                        'username': user.username,
+                        'email': user.email,
+                        'role': user.role,
+                        'business_id': user.business_id
+                    }
+                }), 200
             if user.role == 'Field Agent':
                 return redirect(url_for('salman_field_tasks.my_tasks'))
             return redirect(url_for('salman_competitors.index'))
