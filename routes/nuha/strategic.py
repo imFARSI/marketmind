@@ -13,158 +13,107 @@ from models import db, AiAnalysis, Report, Competitor, Product
 
 strategic_bp = Blueprint('nuha_strategic', __name__, url_prefix='/nuha/strategic')
 
-GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
-NVIDIA_NIM_URL = "https://integrate.api.nvidia.com/v1/chat/completions"
-DEFAULT_NVIDIA_KEY = "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"
+GEMINI_MODELS = [
+    "gemini-1.5-flash",
+    "gemini-2.0-flash",
+    "gemini-2.5-flash",
+    "gemini-1.5-pro"
+]
+GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 
 def call_gemini_api(prompt):
     """
-    Calls Google Gemini 1.5 Flash API to generate strategic recommendations.
+    Calls Google Gemini API to generate strategic recommendations.
+    Tries stable Gemini endpoints (1.5-flash, 2.0-flash, etc.).
     Returns generated content string or None if unconfigured/failed.
     """
     api_key = os.getenv('GEMINI_API_KEY')
     if not api_key:
         return None
 
-    try:
-        url = f"{GEMINI_API_URL}?key={api_key}"
-        headers = {"Content-Type": "application/json"}
-        payload = {
-            "contents": [
-                {
-                    "parts": [{"text": prompt}]
-                }
-            ],
-            "generationConfig": {
-                "temperature": 0.7,
-                "maxOutputTokens": 2048
+    headers = {"Content-Type": "application/json"}
+    payload = {
+        "contents": [
+            {
+                "parts": [{"text": prompt}]
             }
+        ],
+        "generationConfig": {
+            "temperature": 0.7,
+            "maxOutputTokens": 2048
         }
-        resp = requests.post(url, headers=headers, json=payload, timeout=25)
-        if resp.status_code == 200:
-            data = resp.json()
-            candidates = data.get('candidates', [])
-            if candidates:
-                parts = candidates[0].get('content', {}).get('parts', [])
-                if parts:
-                    return parts[0].get('text', '').strip()
-    except Exception:
-        pass
+    }
+
+    for model_name in GEMINI_MODELS:
+        try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
+            resp = requests.post(url, headers=headers, json=payload, timeout=20)
+            if resp.status_code == 200:
+                data = resp.json()
+                candidates = data.get('candidates', [])
+                if candidates:
+                    parts = candidates[0].get('content', {}).get('parts', [])
+                    if parts:
+                        return parts[0].get('text', '').strip()
+        except Exception:
+            continue
     return None
 
 
-def call_nvidia_llama_fallback(prompt):
+GROQ_MODELS = [
+    "openai/gpt-oss-120b",
+    "openai/gpt-oss-20b",
+    "groq/compound-mini",
+    "qwen/qwen3.6-27b",
+    "llama-3.3-70b-versatile",
+    "llama-3.1-8b-instant"
+]
+
+
+def clean_ai_markdown(text):
+    """Strips internal thought tags from reasoning models if present."""
+    if not text:
+        return ""
+    import re
+    cleaned = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL).strip()
+    return cleaned
+
+
+def call_groq_api(prompt):
     """
-    Fallback call to Meta Llama 3.1 8B via NVIDIA NIM API if Gemini API is unavailable.
+    Calls Groq Cloud API for AI strategic reports.
     """
-    api_key = os.getenv('NVIDIA_API_KEY') or DEFAULT_NVIDIA_KEY
+    api_key = os.getenv('GROQ_API_KEY')
     if not api_key:
         return None
 
-    try:
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
-        }
-        payload = {
-            "model": "meta/llama-3.1-8b-instruct",
-            "messages": [
-                {
-                    "role": "system",
-                    "content": "You are MarketMind Strategic AI, an expert business analyst specializing in SWOT analysis, PESTEL frameworks, competitive market positioning, and strategic growth marketing for small businesses."
-                },
-                {"role": "user", "content": prompt}
-            ],
-            "temperature": 0.7,
-            "max_tokens": 1500
-        }
-        resp = requests.post(NVIDIA_NIM_URL, headers=headers, json=payload, timeout=25)
-        if resp.status_code == 200:
-            data = resp.json()
-            return data['choices'][0]['message']['content'].strip()
-    except Exception:
-        pass
+    for model in GROQ_MODELS:
+        try:
+            headers = {
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "model": model,
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": "You are MarketMind Strategic AI, an expert business analyst specializing in SWOT analysis, PESTEL frameworks, competitive market positioning, and strategic growth marketing for small businesses."
+                    },
+                    {"role": "user", "content": prompt}
+                ],
+                "temperature": 0.7,
+                "max_tokens": 2048
+            }
+            resp = requests.post(GROQ_API_URL, headers=headers, json=payload, timeout=20)
+            if resp.status_code == 200:
+                data = resp.json()
+                content = data['choices'][0]['message']['content'].strip()
+                return clean_ai_markdown(content)
+        except Exception:
+            continue
     return None
-
-
-def generate_heuristic_strategic_report(business, competitors, focus_area):
-    """
-    Structured fallback report generator when external AI API keys are unavailable.
-    Guarantees that the feature always produces a high quality, professional report.
-    """
-    b_name = business.name if business else "Your Business"
-    b_ind = business.industry if business else "General Industry"
-    b_desc = business.description if (business and business.description) else "No description provided."
-    b_niche = business.niche if (business and business.niche) else "General Market"
-
-    comp_names = [c.name for c in competitors] if competitors else ["Local & Regional Competitors"]
-    comp_list_str = ", ".join(comp_names)
-
-    report_md = f"""# Executive Strategic Recommendation Report: {b_name}
-
-**Target Business:** {b_name}  
-**Industry Sector:** {b_ind} ({b_niche})  
-**Primary Focus Area:** {focus_area or 'Comprehensive Strategic Positioning'}  
-**Competitor Landscape:** {comp_list_str}  
-**Date of Analysis:** {datetime.utcnow().strftime('%B %d, %Y')}  
-
----
-
-## 1. Executive Summary
-{b_name} operates in the **{b_ind}** sector. To maintain competitive advantage against tracked competitors ({comp_list_str}), {b_name} must capitalize on its agility, leverage niche differentiation, and execute targeted digital marketing strategies. This strategic report provides an in-depth **SWOT Analysis**, **PESTEL Analysis**, and an **Actionable Marketing Strategy**.
-
----
-
-## 2. SWOT Analysis Matrix
-
-### 🟢 Strengths (Internal Advantages)
-- **Niche Positioning:** Strong target focus on {b_niche}, enabling high customer relevance.
-- **Operational Agility:** Faster decision-making cycle compared to larger competitors like {comp_names[0] if comp_names else 'industry rivals'}.
-- **Direct Customer Engagement:** Personalized customer service and localized brand loyalty.
-
-### 🔴 Weaknesses (Internal Vulnerabilities)
-- **Brand Awareness Gap:** Lower search visibility score compared to established competitors.
-- **Resource Constraints:** Limited budget for enterprise-scale marketing automation.
-- **Product Portfolio Breadth:** Single-niche dependency requiring ongoing product line expansion.
-
-### 🟡 Opportunities (External Potential)
-- **Digital & Social Media Expansion:** High ROI opportunity in hyper-targeted social ad campaigns.
-- **Unmet Market Demand:** Exploiting product/service features that competitors ({comp_list_str}) currently overlook.
-- **Strategic Partnerships:** Collaborating with complementary non-competing regional brands.
-
-### 🔵 Threats (External Risks)
-- **Aggressive Pricing Warfare:** Competitors cutting prices to capture market share.
-- **Shift in Consumer Preferences:** Evolving buying patterns requiring rapid digital transformation.
-- **Supply Chain & Operational Costs:** Inflationary pressures impacting margin health.
-
----
-
-## 3. PESTEL Industry Framework
-
-- **🏛️ Political:** Regulatory compliance, local commerce policies, and tax structures affecting small business operations in {b_ind}.
-- **📈 Economic:** Interest rates, consumer discretionary spending capacity, and inflation impacting pricing elasticity.
-- **👥 Social:** Customer demand for transparent sourcing, instant communication, and digital accessibility.
-- **💻 Technological:** Adoption of AI-driven analytics, live location tools, and omni-channel customer service.
-- **🌿 Environmental:** Growing consumer preference for eco-friendly packaging and sustainable practices.
-- **⚖️ Legal:** Data privacy laws (GDPR/local guidelines) and trade mark protections for new products.
-
----
-
-## 4. Strategic Marketing Recommendations & Action Plan
-
-### 🚀 High Priority (0 - 30 Days)
-1. **Hyper-Local SEO Optimization:** Audit and optimize search keywords matching `{b_niche}` to outrank competitors in Google search results.
-2. **Competitive Price Positioning:** Review competitor catalog pricing monthly and introduce flexible value-tier bundles.
-
-### 📈 Medium Term (30 - 90 Days)
-3. **Targeted Social Proof Campaign:** Launch customer review incentives and video testimonials highlighting advantages over {comp_names[0] if comp_names else 'competitors'}.
-4. **Loyalty Program Rollout:** Implement a customer retention reward scheme to increase repeat transaction frequency.
-
-### 🛡️ Defensive Positioning (90+ Days)
-5. **AI & Automated Engagement:** Integrate AI-driven chat and automated email workflows to nurture prospective clients 24/7.
-"""
-    return report_md
 
 
 @strategic_bp.route('/')
@@ -238,13 +187,13 @@ Please output a beautifully structured Markdown report with:
     # 1. Try Gemini API
     ai_content = call_gemini_api(prompt)
 
-    # 2. Try Llama 3.1 fallback via NVIDIA NIM
+    # 2. Try Groq Cloud API
     if not ai_content:
-        ai_content = call_nvidia_llama_fallback(prompt)
+        ai_content = call_groq_api(prompt)
 
-    # 3. Fallback to heuristic generator if APIs fail/unconfigured
     if not ai_content:
-        ai_content = generate_heuristic_strategic_report(business, competitors, focus_area)
+        flash('Failed to generate report. Please ensure your Gemini or Groq API key is valid.', 'danger')
+        return redirect(url_for('nuha_strategic.index'))
 
     # Save to AiAnalysis model
     analysis = AiAnalysis(
@@ -366,7 +315,9 @@ Competitors: {comp_summary or 'General market rivals'}
 Focus Area: {focus_area}
 """
 
-    ai_content = call_gemini_api(prompt) or call_nvidia_llama_fallback(prompt) or generate_heuristic_strategic_report(business, competitors, focus_area)
+    ai_content = call_gemini_api(prompt) or call_groq_api(prompt)
+    if not ai_content:
+        return jsonify({'status': 'error', 'message': 'AI report generation failed. Ensure your Gemini or Groq API key is configured and valid.'}), 502
 
     analysis = AiAnalysis(
         analysis_type='STRATEGIC_REPORT',
