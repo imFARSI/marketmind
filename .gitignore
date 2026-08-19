@@ -22,6 +22,10 @@ instance/
 # PDF & Rule Documents
 *.pdf
 MARKETMIND_PROJECT_RULES.txt
+*_VIVA_NOTES.txt
+*_EXPLANATION.txt
+*.postman_collection.json
+Assignment_*.md
 
 # IDE
 /.idea
