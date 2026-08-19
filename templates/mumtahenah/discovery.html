@@ -1,0 +1,167 @@
+{% extends 'layout.html' %}
+
+{% block title %}Competitor Discovery & Search Visibility Tracker — MarketMind{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+
+    <!-- PAGE HEADER -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h3 class="fw-bold mb-0 text-dark"><i class="bi bi-search text-primary me-2"></i>Competitor Discovery &
+                Search Visibility Tracker</h3>
+            <small class="text-muted">Track Google search visibility and discover competitors using your business model
+                details</small>
+        </div>
+    </div>
+    <!-- SUMMARY KPI STATS -->
+    <div class="row g-2 mb-3">
+        <div class="col-6 col-md-3">
+            <div class="card p-2 text-center border-0 shadow-sm rounded-3">
+                <small class="text-muted text-uppercase fw-bold">Avg Search Visibility</small>
+                <h4 class="fw-bold text-primary mb-0">{{ kpis.avg_visibility }}%</h4>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card p-2 text-center border-0 shadow-sm rounded-3">
+                <small class="text-muted text-uppercase fw-bold">Discovered Sites</small>
+                <h4 class="fw-bold text-success mb-0">{{ kpis.discovered_count }}</h4>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card p-2 text-center border-0 shadow-sm rounded-3">
+                <small class="text-muted text-uppercase fw-bold">Saved Competitors</small>
+                <h4 class="fw-bold text-warning mb-0">{{ kpis.total_competitors }}</h4>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card p-2 text-center border-0 shadow-sm rounded-3">
+                <small class="text-muted text-uppercase fw-bold">Engine Source</small>
+                <h6 class="fw-bold text-info mb-0 text-truncate" title="{{ kpis.search_source }}">{{ kpis.search_source
+                    }}</h6>
+            </div>
+        </div>
+    </div>
+
+    <!-- GOOGLE SEARCH DISCOVERY SEARCH BAR -->
+    <div class="card p-3 border-0 shadow-sm rounded-3 mb-4 bg-white">
+        <form method="POST" action="{{ url_for('mumtahenah_discovery.search') }}" class="row g-2 align-items-center">
+            <div class="col-md-9">
+                <label class="form-label fw-bold text-dark small mb-1"><i
+                        class="bi bi-google me-1 text-danger"></i>Google Custom Search Discovery Query</label>
+                <input type="text" name="query" class="form-control" value="{{ query }}"
+                    placeholder="Enter keywords, industry, or competitor domain to search...">
+            </div>
+            <div class="col-md-3 d-grid">
+                <label class="form-label d-none d-md-block">&nbsp;</label>
+                <button type="submit" class="btn btn-primary rounded-pill fw-bold">
+                    <i class="bi bi-search me-1"></i> Run Google Discovery
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- DISCOVERED COMPETITORS RESULTS TABLE -->
+    <div class="card border-0 shadow-sm rounded-3 mb-4 overflow-hidden">
+        <div class="card-header bg-white py-2 px-3 d-flex justify-content-between align-items-center">
+            <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-globe me-2 text-primary"></i>Google Search Results &
+                Discovered Competitors (Query: "{{ query }}")</h6>
+            <span class="badge bg-primary-subtle text-primary">{{ results|length }} Results Found</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light small text-uppercase">
+                    <tr>
+                        <th class="ps-3" style="width: 70px;">Rank</th>
+                        <th>Competitor Title & Link</th>
+                        <th>Search Snippet</th>
+                        <th style="width: 140px;">Visibility Score</th>
+                        <th class="text-end pe-3" style="width: 160px;">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if results %}
+                    {% for r in results %}
+                    <tr>
+                        <td class="ps-3 fw-bold text-muted">#{{ r.rank }}</td>
+                        <td>
+                            <a href="{{ r.link }}" target="_blank" class="fw-bold text-decoration-none text-primary">{{
+                                r.title }}</a>
+                            <br />
+                            <small class="text-muted"><i class="bi bi-link-45deg"></i>{{ r.display_link }}</small>
+                        </td>
+                        <td class="small text-secondary">{{ r.snippet }}</td>
+                        <td>
+                            <span class="badge bg-success-subtle text-success fw-bold px-2 py-1">
+                                <i class="bi bi-graph-up-arrow me-1"></i>{{ r.visibility_score }}%
+                            </span>
+                        </td>
+                        <td class="text-end pe-3">
+                            <form method="POST" action="{{ url_for('mumtahenah_discovery.add_discovered') }}"
+                                class="d-inline">
+                                <input type="hidden" name="name" value="{{ r.title[:80] }}">
+                                <input type="hidden" name="website" value="{{ r.link }}">
+                                <input type="hidden" name="visibility_score" value="{{ r.visibility_score }}">
+                                <button type="submit" class="btn btn-outline-success btn-sm rounded-pill px-3">
+                                    <i class="bi bi-plus-lg me-1"></i> Add to Workspace
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center py-3 text-muted">No search results found. Enter a keyword
+                            above and click Run Google Discovery.</td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- SAVED WORKSPACE COMPETITORS SEARCH VISIBILITY TABLE -->
+    <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+        <div class="card-header bg-light py-2 px-3 fw-bold text-dark small text-uppercase">
+            <i class="bi bi-bar-chart-line me-2"></i>Workspace Competitor Search Visibility Scores
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light small text-uppercase">
+                    <tr>
+                        <th class="ps-3">Competitor Name</th>
+                        <th>Website Domain</th>
+                        <th>Visibility Bar</th>
+                        <th class="text-end pe-3">Score</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if competitors %}
+                    {% for c in competitors %}
+                    <tr>
+                        <td class="ps-3 fw-bold text-dark">{{ c.name }}</td>
+                        <td><small class="text-muted">{{ c.website or 'N/A' }}</small></td>
+                        <td style="width: 40%;">
+                            <div class="progress" style="height: 10px;">
+                                <div class="progress-bar bg-primary" role="progressbar"
+                                    style="width: {{ c.search_visibility_score if c.search_visibility_score > 0 else 50 }}%;">
+                                </div>
+                            </div>
+                        </td>
+                        <td class="text-end pe-3 fw-bold text-primary">{{ "%.1f"|format(c.search_visibility_score) if
+                            c.search_visibility_score > 0 else "50.0" }}%</td>
+                    </tr>
+                    {% endfor %}
+                    {% else %}
+                    <tr>
+                        <td colspan="4" class="text-center py-3 text-muted">No competitors saved in workspace yet. Click
+                            "Add to Workspace" on any search result above!</td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
