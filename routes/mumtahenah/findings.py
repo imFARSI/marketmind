@@ -31,22 +31,23 @@ def wants_json_response():
 # ------------------------------------------------------------------------------
 def dispatch_resend_email_alert(recipient_email, task_title, agent_name, competitor_name, findings_notes):
     """
-    Sends automated email alert via Resend API when field agent submits on-site findings.
+    Sends automated email alert via Resend API to Business Owner when field agent submits on-site findings.
     Includes simulated fallback if RESEND_API_KEY is unconfigured.
     """
-    subject = f"[MarketMind Alert] On-Site Field Audit Submitted: {task_title}"
+    subject = f"[MarketMind Intelligence Alert] On-Site Field Audit Submitted: {task_title}"
     html_content = f"""
-    <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #E2E8F0; border-radius: 8px;">
-        <h2 style="color: #2563EB; margin-top: 0;">📍 On-Site Field Audit Submitted</h2>
-        <p><strong>Field Agent:</strong> {agent_name}</p>
-        <p><strong>Target Competitor:</strong> {competitor_name}</p>
-        <p><strong>Field Task:</strong> {task_title}</p>
+    <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #E2E8F0; border-radius: 8px; max-width: 600px;">
+        <h2 style="color: #2563EB; margin-top: 0;">📍 On-Site Field Audit Alert</h2>
+        <p>A new field research observation has been submitted by your agent.</p>
         <hr style="border: 0; border-top: 1px solid #E2E8F0; margin: 15px 0;"/>
-        <h4 style="color: #1E293B; margin-bottom: 5px;">Agent Findings Notes:</h4>
-        <blockquote style="background: #F8FAFC; padding: 12px; border-left: 4px solid #2563EB; margin: 0; color: #334155;">
+        <p><strong>Field Agent:</strong> {agent_name}</p>
+        <p><strong>Target Competitor Store:</strong> {competitor_name}</p>
+        <p><strong>Field Task Title:</strong> {task_title}</p>
+        <h4 style="color: #1E293B; margin-bottom: 5px;">Agent Observation Notes & Findings:</h4>
+        <blockquote style="background: #F8FAFC; padding: 14px; border-left: 4px solid #2563EB; margin: 0; color: #334155; border-radius: 4px;">
             {findings_notes}
         </blockquote>
-        <p style="font-size: 12px; color: #64748B; margin-top: 20px;">Sent automatically by MarketMind Intelligence Platform (Resend API).</p>
+        <p style="font-size: 12px; color: #64748B; margin-top: 20px;">Sent automatically by MarketMind Intelligence Platform to Business Owner ({recipient_email}).</p>
     </div>
     """
 
@@ -70,11 +71,11 @@ def dispatch_resend_email_alert(recipient_email, task_title, agent_name, competi
             print(f"Resend API Error: {e}")
 
     # Fallback simulated email dispatch
-    return True, f"Simulated Email Logged (To: {recipient_email})"
+    return True, f"Simulated Email Logged (To Business Owner: {recipient_email})"
 
 
 # ------------------------------------------------------------------------------
-# ROUTE 1: View On-Site Findings Submission Portal & Log Feed
+# ROUTE 1: View On-Site Findings Portal & Intelligence Feed
 # ------------------------------------------------------------------------------
 @findings_bp.route('/')
 @login_required
@@ -133,7 +134,7 @@ def index():
 
 
 # ------------------------------------------------------------------------------
-# ROUTE 2: Submit On-Site Field Findings & Trigger Resend Email Alert
+# ROUTE 2: Field Agent Submits On-Site Findings & Triggers Email Alert to Owner
 # ------------------------------------------------------------------------------
 @findings_bp.route('/submit', methods=['POST'])
 @login_required
@@ -165,8 +166,9 @@ def submit():
     task.status = 'Completed'
     db.session.commit()
 
-    # Trigger Automated Email Alert via Resend API
-    recipient_email = (business.contact_email if business and business.contact_email else current_user.email)
+    # Determine Business Owner recipient email address
+    owner = User.query.get(business.owner_id) if (business and business.owner_id) else None
+    recipient_email = (business.contact_email if (business and business.contact_email) else (owner.email if owner else current_user.email))
     agent = User.query.get(task.assigned_to_id)
     comp = Competitor.query.get(task.competitor_id)
 
@@ -174,20 +176,21 @@ def submit():
         recipient_email=recipient_email,
         task_title=task.title,
         agent_name=agent.username if agent else current_user.username,
-        competitor_name=comp.name if comp else 'Target Competitor',
+        competitor_name=comp.name if comp else 'Target Competitor Store',
         findings_notes=formatted_notes
     )
 
     if wants_json_response():
         return jsonify({
             'success': True,
-            'message': 'On-site findings submitted and email alert dispatched successfully.',
+            'message': 'On-site findings submitted and email alert dispatched to Business Owner.',
             'task_id': task.id,
             'task_status': task.status,
+            'recipient_email': recipient_email,
             'email_status': email_status
         })
 
-    flash(f"On-site findings submitted for '{task.title}'! Automated email alert triggered ({email_status}).", 'success')
+    flash(f"On-site audit findings submitted for '{task.title}'! Automated Resend email alert sent to Business Owner ({recipient_email}).", 'success')
     return redirect(url_for('mumtahenah_findings.index'))
 
 
